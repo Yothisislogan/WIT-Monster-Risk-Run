@@ -1,0 +1,18 @@
+# Godot 4
+.godot/
+.import/
+*.import.tmp
+
+# Exports
+export_presets.cfg.secret
+build/
+*.apk
+*.aab
+*.ipa
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
