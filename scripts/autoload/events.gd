@@ -8,6 +8,7 @@ signal player_damaged(amount: int, source: String)
 signal player_died(cause: String)
 signal shield_changed(active: bool)
 signal charge_changed(ratio: float)
+signal ability_energy_changed(current: float, maximum: float)
 
 # Economy / upgrades
 signal currency_changed(amount: int)

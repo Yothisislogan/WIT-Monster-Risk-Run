@@ -9,6 +9,8 @@ signal restart_requested
 @onready var coverage_label: Label = %CoverageLabel
 @onready var charge_bar: ProgressBar = %ChargeBar
 @onready var shield_label: Label = %ShieldLabel
+@onready var ability_bar: ProgressBar = %AbilityBar
+@onready var ability_label: Label = %AbilityLabel
 @onready var currency_label: Label = %CurrencyLabel
 @onready var claim_panel: PanelContainer = %ClaimPanel
 @onready var claim_text: Label = %ClaimText
@@ -25,6 +27,7 @@ func _ready() -> void:
 	Events.charge_changed.connect(_on_charge_changed)
 	Events.currency_changed.connect(_on_currency_changed)
 	Events.shield_changed.connect(_on_shield_changed)
+	Events.ability_energy_changed.connect(_on_ability_energy_changed)
 	Events.run_started.connect(_on_run_started)
 	Events.run_ended.connect(_on_run_ended)
 	restart_button.pressed.connect(func() -> void:
@@ -66,6 +69,15 @@ func _on_currency_changed(amount: int) -> void:
 
 func _on_shield_changed(active: bool) -> void:
 	shield_label.visible = active
+
+
+func _on_ability_energy_changed(current: float, maximum: float) -> void:
+	ability_bar.max_value = maximum
+	ability_bar.value = current
+	# Bright label = ready to fire; dim = still charging (colorblind-safe
+	# because the bar length carries the same information).
+	var ready := current >= GameManager.ABILITY_COST
+	ability_label.modulate = Color.WHITE if ready else Color(1, 1, 1, 0.4)
 
 
 func _on_run_started() -> void:

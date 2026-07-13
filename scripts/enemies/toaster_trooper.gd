@@ -24,7 +24,23 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 
 
+var _base_tint := Color.WHITE
+
+
 func _on_damaged() -> void:
 	visual.modulate = Color(3.0, 3.0, 3.0)
 	var tween := create_tween()
-	tween.tween_property(visual, "modulate", Color.WHITE, 0.15)
+	tween.tween_property(visual, "modulate", _base_tint, 0.15)
+
+
+func _on_weakened() -> void:
+	# Green tint signals "munchable" — readable at a glance on a phone.
+	_base_tint = Color(0.6, 1.0, 0.65)
+
+
+func _on_burn_changed(burning: bool) -> void:
+	if burning:
+		_base_tint = Color(1.0, 0.55, 0.3)
+	else:
+		_base_tint = Color(0.6, 1.0, 0.65) if weakened else Color.WHITE
+	visual.modulate = _base_tint

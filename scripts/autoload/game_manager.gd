@@ -3,19 +3,25 @@ extends Node
 ## checkpoint after every completed room so mobile players can close the app
 ## and resume (GAME_DESIGN.md §5, §17, §24).
 
-## Handcrafted room modules for the prototype. The roguelite framework
-## (Phase 3) will replace this with randomized sequencing per Risk Zone.
-const ROOM_SEQUENCE: Array[String] = [
+## Pool of handcrafted room modules. Each run shuffles the pool into a
+## sequence (§12: randomize order, never individual platforms). The
+## sequence is saved with the run so resuming never re-rolls a room (§17).
+const ROOM_POOL: Array[String] = [
 	"res://scenes/rooms/test_room_a.tscn",
 	"res://scenes/rooms/test_room_b.tscn",
+	"res://scenes/rooms/test_room_c.tscn",
 ]
 
 const BASE_COVERAGE := 100
+const MAX_ABILITY_ENERGY := 100.0
+const ABILITY_COST := 40.0
 
 var max_coverage: int = BASE_COVERAGE
 var coverage: int = BASE_COVERAGE
 var currency: int = 0
 var umbrella_active: bool = false  # Umbrella Coverage: blocks one hit
+var ability_energy: float = 0.0  # fuels the equipped boss ability (Flame Draft)
+var room_sequence: Array = []
 var room_index: int = 0
 var run_active: bool = false
 var last_damage_source: String = "unknown peril"
@@ -24,6 +30,7 @@ var stats := {
 	"rooms_completed": 0,
 	"damage_taken": 0,
 	"enemies_defeated": 0,
+	"enemies_consumed": 0,
 }
 
 
@@ -47,14 +54,16 @@ func start_new_run() -> void:
 	coverage = max_coverage
 	currency = 0
 	umbrella_active = false
+	ability_energy = 0.0
+	room_sequence = ROOM_POOL.duplicate()
+	room_sequence.shuffle()
 	room_index = 0
 	run_active = true
 	last_damage_source = "unknown peril"
-	stats = {"rooms_completed": 0, "damage_taken": 0, "enemies_defeated": 0}
+	stats = {"rooms_completed": 0, "damage_taken": 0, "enemies_defeated": 0, "enemies_consumed": 0}
 	SaveManager.clear_run()
 	Events.run_started.emit()
-	Events.coverage_changed.emit(coverage, max_coverage)
-	Events.currency_changed.emit(currency)
+	_emit_state()
 
 
 func resume_run() -> bool:
@@ -65,17 +74,29 @@ func resume_run() -> bool:
 	coverage = int(run.get("coverage", max_coverage))
 	currency = int(run.get("currency", 0))
 	umbrella_active = bool(run.get("umbrella_active", false))
-	room_index = clampi(int(run.get("room_index", 0)), 0, ROOM_SEQUENCE.size() - 1)
+	ability_energy = clampf(float(run.get("ability_energy", 0.0)), 0.0, MAX_ABILITY_ENERGY)
+	# Drop any rooms that no longer exist in the pool (renamed between builds).
+	room_sequence = run.get("room_sequence", []).filter(func(p: Variant) -> bool: return p in ROOM_POOL)
+	if room_sequence.is_empty():
+		room_sequence = ROOM_POOL.duplicate()
+		room_sequence.shuffle()
+	room_index = clampi(int(run.get("room_index", 0)), 0, room_sequence.size() - 1)
 	stats = run.get("stats", stats)
 	run_active = true
 	Events.run_started.emit()
-	Events.coverage_changed.emit(coverage, max_coverage)
-	Events.currency_changed.emit(currency)
+	_emit_state()
 	return true
 
 
+func _emit_state() -> void:
+	Events.coverage_changed.emit(coverage, max_coverage)
+	Events.currency_changed.emit(currency)
+	Events.shield_changed.emit(umbrella_active)
+	Events.ability_energy_changed.emit(ability_energy, MAX_ABILITY_ENERGY)
+
+
 func current_room_path() -> String:
-	return ROOM_SEQUENCE[room_index]
+	return room_sequence[room_index]
 
 
 ## Called when the exit door of a room is reached. Saves a checkpoint at the
@@ -83,7 +104,7 @@ func current_room_path() -> String:
 func complete_room() -> void:
 	stats["rooms_completed"] = int(stats["rooms_completed"]) + 1
 	Events.room_completed.emit(current_room_path())
-	if room_index + 1 >= ROOM_SEQUENCE.size():
+	if room_index + 1 >= room_sequence.size():
 		end_run(true)
 		return
 	room_index += 1
@@ -96,6 +117,8 @@ func save_checkpoint() -> void:
 		"coverage": coverage,
 		"currency": currency,
 		"umbrella_active": umbrella_active,
+		"ability_energy": ability_energy,
+		"room_sequence": room_sequence,
 		"room_index": room_index,
 		"stats": stats,
 	})
@@ -148,6 +171,28 @@ func grant_umbrella() -> void:
 
 func record_enemy_defeated() -> void:
 	stats["enemies_defeated"] = int(stats["enemies_defeated"]) + 1
+	add_ability_energy(10.0)
+
+
+## Monster Munch (§7): consuming a weakened enemy restores a little
+## Coverage and charges the boss ability meter.
+func record_enemy_consumed() -> void:
+	stats["enemies_consumed"] = int(stats["enemies_consumed"]) + 1
+	heal(10)
+	add_ability_energy(25.0)
+
+
+func add_ability_energy(amount: float) -> void:
+	ability_energy = clampf(ability_energy + amount, 0.0, MAX_ABILITY_ENERGY)
+	Events.ability_energy_changed.emit(ability_energy, MAX_ABILITY_ENERGY)
+
+
+func try_spend_ability_energy(cost: float = ABILITY_COST) -> bool:
+	if ability_energy < cost:
+		return false
+	ability_energy -= cost
+	Events.ability_energy_changed.emit(ability_energy, MAX_ABILITY_ENERGY)
+	return true
 
 
 # --- Claim report ----------------------------------------------------------
@@ -161,6 +206,7 @@ func build_claim_report(victory: bool) -> Dictionary:
 		"rooms_completed": rooms,
 		"damage_taken": taken,
 		"enemies_defeated": int(stats["enemies_defeated"]),
+		"enemies_consumed": int(stats["enemies_consumed"]),
 		"estimated_property_damage": property_damage,
 		"claim_status": "Approved. Somehow." if victory else "Under review.",
 		"victory": victory,

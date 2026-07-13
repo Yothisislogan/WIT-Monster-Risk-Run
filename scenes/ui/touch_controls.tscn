@@ -82,3 +82,19 @@ action = &"special"
 label_text = "SPEC"
 button_color = Color(0.65, 0.4, 0.9, 0.55)
 pressed_color = Color(0.65, 0.4, 0.9, 0.9)
+
+[node name="MunchButton" type="Control" parent="Root"]
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -190.0
+offset_top = -400.0
+offset_right = -100.0
+offset_bottom = -310.0
+mouse_filter = 2
+script = ExtResource("3_button")
+action = &"munch"
+label_text = "MUNCH"
+button_color = Color(0.9, 0.75, 0.2, 0.55)
+pressed_color = Color(0.9, 0.75, 0.2, 0.9)

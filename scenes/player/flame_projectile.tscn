@@ -1,0 +1,26 @@
+[gd_scene load_steps=3 format=3 uid="uid://witflame00001"]
+
+[ext_resource type="Script" path="res://scripts/weapons/flame_projectile.gd" id="1_script"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_flame"]
+radius = 10.0
+
+[node name="FlameProjectile" type="Area2D"]
+collision_layer = 8
+collision_mask = 5
+script = ExtResource("1_script")
+speed = 620.0
+lifetime = 0.9
+
+[node name="Collision" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_flame")
+
+[node name="Visual" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-14, 0, -6, -8, 6, -6, 14, 0, 6, 6, -6, 8)
+color = Color(1, 0.5, 0.12, 1)
+
+[node name="Core" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-6, 0, 0, -4, 7, 0, 0, 4)
+color = Color(1, 0.85, 0.3, 1)
+
+[connection signal="body_entered" from="." to="." method="_on_body_entered"]

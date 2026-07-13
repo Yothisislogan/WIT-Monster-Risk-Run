@@ -4,17 +4,23 @@ A mobile-first, side-scrolling action roguelite starring the We Insure Things Mo
 Built with **Godot 4.x** (GDScript), landscape orientation, touch-first controls with
 full controller support.
 
-This repository currently contains the **Phase 1 / MVP movement prototype** described in
-[docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) (see sections 26, 28, and 32):
+This repository currently contains the **MVP prototype** described in
+[docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) (see sections 26, 28, and 32), plus the first
+Phase 2/3 systems:
 
 - WIT Monster movement: run, variable-height jump, dash, wall cling, wall jump
 - Mobile-friendly input buffering (jump buffer, coyote time, dash buffer, landing attack buffer)
 - Base weapon: tap-to-shoot projectile, hold-to-charge piercing shot (pooled projectiles)
-- Coverage meter (health) HUD
+- Monster Munch: weakened enemies (tinted green) can be consumed to restore
+  Coverage and charge the boss ability meter
+- Flame Draft boss ability: spends ability energy to fire a piercing blast
+  that ignites enemies (burn damage over time)
+- Coverage meter and boss ability meter HUD
 - One enemy (Toaster Trooper) and one hazard (Heat Vent)
-- Room-to-room transition with two handcrafted test rooms
+- Three handcrafted room modules shuffled into a randomized sequence each run
 - One temporary upgrade pickup (Umbrella Coverage — blocks one hit)
-- Save and resume after every completed room (versioned JSON save)
+- Save and resume after every completed room (versioned JSON save; the shuffled
+  room sequence is saved so resuming never re-rolls a room)
 - Touch controls (floating virtual stick + action buttons) and controller/keyboard
   through the same input action layer
 - Auto-pause on focus loss / app backgrounding
@@ -36,6 +42,7 @@ This repository currently contains the **Phase 1 / MVP movement prototype** desc
 | Attack  | J (hold = charge) | X (left)          |
 | Dash    | K / Shift         | B (right)         |
 | Special | L                 | Y (top)           |
+| Munch   | E                 | Right shoulder    |
 | Pause   | Esc               | Start             |
 
 On touch devices the virtual controls appear automatically; on desktop they stay hidden.

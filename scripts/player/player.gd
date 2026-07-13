@@ -40,9 +40,14 @@ extends CharacterBody2D
 @export var invulnerability_time: float = 0.8
 @export var hurt_knockback: Vector2 = Vector2(260.0, -300.0)
 
+# --- Flame Draft (equipped boss ability, §12) ---
+@export var flame_damage: int = 25
+
 @onready var sprite: Node2D = $Sprite
 @onready var muzzle: Marker2D = $Muzzle
 @onready var projectile_pool: Node = $ProjectilePool
+@onready var flame_pool: Node = $FlamePool
+@onready var munch_area: Area2D = $MunchArea
 
 var facing: int = 1
 var coyote_timer: float = 0.0
@@ -62,6 +67,7 @@ var fire_timer: float = 0.0
 
 var invulnerability_timer: float = 0.0
 var base_sprite_scale: Vector2 = Vector2.ONE
+var _pop_tween: Tween
 
 
 func _ready() -> void:
@@ -82,6 +88,8 @@ func _physics_process(delta: float) -> void:
 		_try_dash()
 
 	_process_weapon(delta)
+	_process_ability()
+	_process_munch()
 	move_and_slide()
 	_after_move()
 	_update_visuals(delta)
@@ -201,6 +209,34 @@ func _fire(damage: int, pierce: bool) -> void:
 	projectile.launch(muzzle.global_position, facing, damage, pierce)
 
 
+## Flame Draft: costs ability energy, pierces, and ignites what it hits.
+func _process_ability() -> void:
+	if not Input.is_action_just_pressed("special"):
+		return
+	if not GameManager.try_spend_ability_energy():
+		return
+	var flame: Node2D = flame_pool.acquire()
+	flame.launch(muzzle.global_position, facing, flame_damage, true)
+
+
+## Monster Munch: consume a nearby weakened enemy (§7).
+func _process_munch() -> void:
+	if not Input.is_action_just_pressed("munch"):
+		return
+	for body in munch_area.get_overlapping_bodies():
+		if body.has_method("can_be_munched") and body.can_be_munched():
+			body.consume()
+			_munch_pop()
+			return
+
+
+func _munch_pop() -> void:
+	sprite.scale = base_sprite_scale * Vector2(1.25 * facing, 0.8)
+	_pop_tween = create_tween()
+	_pop_tween.tween_property(sprite, "scale",
+			Vector2(base_sprite_scale.x * facing, base_sprite_scale.y), 0.2)
+
+
 func _after_move() -> void:
 	if is_on_floor():
 		coyote_timer = coyote_time
@@ -208,15 +244,18 @@ func _after_move() -> void:
 
 
 func _update_visuals(delta: float) -> void:
-	sprite.scale.x = base_sprite_scale.x * facing
 	muzzle.position.x = absf(muzzle.position.x) * facing
+	var pop_active := _pop_tween != null and _pop_tween.is_running()
+	if not pop_active:
+		sprite.scale.x = base_sprite_scale.x * facing
 	# Damage feedback: flash while invulnerable, squash slightly at full charge.
 	if invulnerability_timer > 0.0:
 		sprite.modulate.a = 0.4 if fmod(invulnerability_timer, 0.2) > 0.1 else 1.0
 	else:
 		sprite.modulate.a = 1.0
-	var squash := 0.85 if charging and charge_timer >= charge_time else 1.0
-	sprite.scale.y = move_toward(sprite.scale.y, base_sprite_scale.y * squash, 2.0 * delta)
+	if not pop_active:
+		var squash := 0.85 if charging and charge_timer >= charge_time else 1.0
+		sprite.scale.y = move_toward(sprite.scale.y, base_sprite_scale.y * squash, 2.0 * delta)
 
 
 ## Entry point for enemies and hazards. I-frames live here; run-level

@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://withud0000001"]
+[gd_scene load_steps=6 format=3 uid="uid://withud0000001"]
 
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
 
@@ -18,6 +18,13 @@ corner_radius_bottom_left = 6
 
 [sub_resource type="StyleBoxFlat" id="style_charge_fill"]
 bg_color = Color(1, 0.85, 0.2, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="style_ability_fill"]
+bg_color = Color(1, 0.5, 0.12, 1)
 corner_radius_top_left = 4
 corner_radius_top_right = 4
 corner_radius_bottom_right = 4
@@ -60,6 +67,21 @@ theme_override_styles/background = SubResource("style_bar_bg")
 theme_override_styles/fill = SubResource("style_charge_fill")
 max_value = 1.0
 step = 0.01
+show_percentage = false
+
+[node name="AbilityLabel" type="Label" parent="Root/CoverageBox"]
+unique_name_in_owner = true
+modulate = Color(1, 1, 1, 0.4)
+theme_override_font_sizes/font_size = 14
+text = "FLAME DRAFT"
+
+[node name="AbilityBar" type="ProgressBar" parent="Root/CoverageBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 12)
+theme_override_styles/background = SubResource("style_bar_bg")
+theme_override_styles/fill = SubResource("style_ability_fill")
+max_value = 100.0
+value = 0.0
 show_percentage = false
 
 [node name="ShieldLabel" type="Label" parent="Root/CoverageBox"]
