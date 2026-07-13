@@ -1,8 +1,8 @@
 # Builds the Godot web export and publishes it to GitHub Pages.
 #
-# One-time setup: repo Settings -> Pages -> Source: "GitHub Actions".
-# Deploys on every push to main; can also be run manually from the
-# Actions tab once this file is on the default branch.
+# No manual setup needed: the deploy job enables Pages via the API on
+# first run (actions/configure-pages with enablement). Deploys on every
+# push to main; can also be run manually from the Actions tab.
 #
 # Thread support is disabled in the Web export preset so the build runs
 # on GitHub Pages without cross-origin isolation headers (which Pages
@@ -24,6 +24,9 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
+env:
+  GODOT_VERSION: "4.3"
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -32,6 +35,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # The image ships templates under /root, but Actions containers run
+      # with a different HOME — move them where Godot will look.
+      - name: Install export templates
+        run: |
+          mkdir -p ~/.local/share/godot/export_templates
+          mv /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable ~/.local/share/godot/export_templates/
 
       - name: Import assets
         run: godot --headless --import || true
@@ -53,6 +63,11 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Enable GitHub Pages if needed
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
