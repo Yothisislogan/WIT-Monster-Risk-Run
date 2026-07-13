@@ -1,0 +1,28 @@
+[gd_scene load_steps=3 format=3 uid="uid://witpickup00001"]
+
+[ext_resource type="Script" path="res://scripts/rooms/pickup_policy_card.gd" id="1_script"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_card"]
+size = Vector2(28, 36)
+
+[node name="PickupPolicyCard" type="Area2D"]
+collision_layer = 64
+collision_mask = 2
+script = ExtResource("1_script")
+
+[node name="Card" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-13, -18, 13, -18, 13, 18, -13, 18)
+color = Color(0.95, 0.95, 0.98, 1)
+
+[node name="Umbrella" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-9, -2, 0, -12, 9, -2)
+color = Color(0.12, 0.48, 0.88, 1)
+
+[node name="UmbrellaPole" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-1, -2, 1, -2, 1, 12, -1, 12)
+color = Color(0.12, 0.48, 0.88, 1)
+
+[node name="Collision" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_card")
+
+[connection signal="body_entered" from="." to="." method="_on_body_entered"]
