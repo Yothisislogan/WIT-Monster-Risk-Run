@@ -1,0 +1,27 @@
+[gd_scene load_steps=3 format=3 uid="uid://witheatvent001"]
+
+[ext_resource type="Script" path="res://scripts/hazards/heat_vent.gd" id="1_script"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_flame"]
+size = Vector2(36, 52)
+
+[node name="HeatVent" type="Area2D"]
+collision_layer = 32
+collision_mask = 2
+monitoring = false
+script = ExtResource("1_script")
+
+[node name="Base" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-24, 0, 24, 0, 20, -8, -20, -8)
+color = Color(0.35, 0.35, 0.4, 1)
+
+[node name="Flame" type="Polygon2D" parent="."]
+visible = false
+polygon = PackedVector2Array(-16, -8, 16, -8, 10, -34, 0, -56, -10, -34)
+color = Color(1, 0.55, 0.1, 1)
+
+[node name="Collision" type="CollisionShape2D" parent="."]
+position = Vector2(0, -32)
+shape = SubResource("RectangleShape2D_flame")
+
+[connection signal="body_entered" from="." to="." method="_on_body_entered"]

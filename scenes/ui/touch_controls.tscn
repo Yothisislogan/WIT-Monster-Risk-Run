@@ -1,0 +1,100 @@
+[gd_scene load_steps=4 format=3 uid="uid://wittouch00001"]
+
+[ext_resource type="Script" path="res://scripts/ui/touch_controls.gd" id="1_layer"]
+[ext_resource type="Script" path="res://scripts/ui/virtual_stick.gd" id="2_stick"]
+[ext_resource type="Script" path="res://scripts/ui/virtual_button.gd" id="3_button"]
+
+[node name="TouchControls" type="CanvasLayer"]
+layer = 5
+script = ExtResource("1_layer")
+
+[node name="Root" type="Control" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="VirtualStick" type="Control" parent="Root"]
+anchor_top = 0.25
+anchor_right = 0.42
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("2_stick")
+
+[node name="JumpButton" type="Control" parent="Root"]
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -190.0
+offset_top = -210.0
+offset_right = -40.0
+offset_bottom = -60.0
+mouse_filter = 2
+script = ExtResource("3_button")
+action = &"jump"
+label_text = "JUMP"
+
+[node name="AttackButton" type="Control" parent="Root"]
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -350.0
+offset_top = -280.0
+offset_right = -230.0
+offset_bottom = -160.0
+mouse_filter = 2
+script = ExtResource("3_button")
+action = &"attack"
+label_text = "FIRE"
+button_color = Color(0.9, 0.45, 0.15, 0.55)
+pressed_color = Color(0.9, 0.45, 0.15, 0.9)
+
+[node name="DashButton" type="Control" parent="Root"]
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -510.0
+offset_top = -170.0
+offset_right = -390.0
+offset_bottom = -50.0
+mouse_filter = 2
+script = ExtResource("3_button")
+action = &"dash"
+label_text = "DASH"
+button_color = Color(0.35, 0.8, 0.45, 0.55)
+pressed_color = Color(0.35, 0.8, 0.45, 0.9)
+
+[node name="SpecialButton" type="Control" parent="Root"]
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -340.0
+offset_top = -420.0
+offset_right = -240.0
+offset_bottom = -320.0
+mouse_filter = 2
+script = ExtResource("3_button")
+action = &"special"
+label_text = "SPEC"
+button_color = Color(0.65, 0.4, 0.9, 0.55)
+pressed_color = Color(0.65, 0.4, 0.9, 0.9)
+
+[node name="MunchButton" type="Control" parent="Root"]
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -190.0
+offset_top = -400.0
+offset_right = -100.0
+offset_bottom = -310.0
+mouse_filter = 2
+script = ExtResource("3_button")
+action = &"munch"
+label_text = "MUNCH"
+button_color = Color(0.9, 0.75, 0.2, 0.55)
+pressed_color = Color(0.9, 0.75, 0.2, 0.9)

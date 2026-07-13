@@ -1,0 +1,49 @@
+[gd_scene load_steps=4 format=3 uid="uid://wittoaster0001"]
+
+[ext_resource type="Script" path="res://scripts/enemies/toaster_trooper.gd" id="1_script"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
+size = Vector2(34, 28)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_hit"]
+size = Vector2(38, 32)
+
+[node name="ToasterTrooper" type="CharacterBody2D"]
+collision_layer = 4
+collision_mask = 1
+script = ExtResource("1_script")
+max_health = 30
+contact_damage = 10
+currency_reward = 5
+defeat_source = "assaulted by a Toaster Trooper"
+
+[node name="Visual" type="Node2D" parent="."]
+
+[node name="Body" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(-17, 14, -17, -8, -13, -14, 13, -14, 17, -8, 17, 14)
+color = Color(0.75, 0.78, 0.82, 1)
+
+[node name="Slot" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(-10, -12, 10, -12, 10, -9, -10, -9)
+color = Color(0.2, 0.2, 0.22, 1)
+
+[node name="Eye" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(6, -4, 12, -4, 12, 2, 6, 2)
+color = Color(0.9, 0.25, 0.15, 1)
+
+[node name="Collision" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_body")
+
+[node name="Hitbox" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="Collision" type="CollisionShape2D" parent="Hitbox"]
+shape = SubResource("RectangleShape2D_hit")
+
+[node name="EdgeProbe" type="RayCast2D" parent="."]
+position = Vector2(-18, 0)
+target_position = Vector2(0, 30)
+
+[node name="OnScreen" type="VisibleOnScreenNotifier2D" parent="."]
+rect = Rect2(-24, -20, 48, 40)

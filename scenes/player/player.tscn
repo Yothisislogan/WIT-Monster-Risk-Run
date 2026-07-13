@@ -1,0 +1,51 @@
+[gd_scene load_steps=9 format=3 uid="uid://witplayer00001"]
+
+[ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
+[ext_resource type="Texture2D" path="res://icon.svg" id="2_icon"]
+[ext_resource type="Script" path="res://scripts/weapons/projectile_pool.gd" id="3_pool"]
+[ext_resource type="PackedScene" path="res://scenes/player/projectile.tscn" id="4_proj"]
+[ext_resource type="Script" path="res://scripts/player/camera_rig.gd" id="5_cam"]
+[ext_resource type="PackedScene" path="res://scenes/player/flame_projectile.tscn" id="6_flame"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_body"]
+radius = 14.0
+height = 44.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_munch"]
+radius = 64.0
+
+[node name="Player" type="CharacterBody2D"]
+collision_layer = 2
+collision_mask = 1
+script = ExtResource("1_player")
+
+[node name="Sprite" type="Sprite2D" parent="."]
+scale = Vector2(0.4, 0.4)
+texture = ExtResource("2_icon")
+
+[node name="Collision" type="CollisionShape2D" parent="."]
+shape = SubResource("CapsuleShape2D_body")
+
+[node name="Muzzle" type="Marker2D" parent="."]
+position = Vector2(22, -4)
+
+[node name="ProjectilePool" type="Node" parent="."]
+script = ExtResource("3_pool")
+projectile_scene = ExtResource("4_proj")
+
+[node name="FlamePool" type="Node" parent="."]
+script = ExtResource("3_pool")
+projectile_scene = ExtResource("6_flame")
+initial_size = 3
+
+[node name="MunchArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 4
+
+[node name="Collision" type="CollisionShape2D" parent="MunchArea"]
+shape = SubResource("CircleShape2D_munch")
+
+[node name="Camera" type="Camera2D" parent="."]
+position_smoothing_enabled = true
+position_smoothing_speed = 8.0
+script = ExtResource("5_cam")
