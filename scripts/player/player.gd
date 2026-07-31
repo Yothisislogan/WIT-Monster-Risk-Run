@@ -5,10 +5,13 @@ extends CharacterBody2D
 ## generous mobile input buffering, short powerful dash, clear wall cling.
 ## All timing constants are exported so they can be tuned on a real phone.
 ##
-## Jump budget the levels are built against:
-##   single jump rise  = jump_velocity^2 / (2 * rise_gravity) = 640^2/3000 = 136 px
-##   double jump total = ~248 px
-##   flat gap (jump)   = ~270 px, (jump + double) = ~440 px, more with dash
+## Jump budget the levels are built against (tools/check_reachability.py
+## enforces it). The closed form v^2/2g = 640^2/3000 = 136 px under-reports:
+## the apex hang below adds ~6 px, so the real numbers are
+##   single jump rise  = 143 px
+##   double jump total = 261 px
+##   flat gap (jump)   = 312 px, (jump + double) = 504 px, +130 px with dash
+## Level design uses the conservative closed form, leaving built-in headroom.
 
 # --- Ground movement ---
 @export var move_speed: float = 360.0
