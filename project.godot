@@ -16,6 +16,7 @@ config/icon="res://icon.svg"
 
 Events="*res://scripts/autoload/events.gd"
 SaveManager="*res://scripts/autoload/save_manager.gd"
+Juice="*res://scripts/autoload/juice.gd"
 GameManager="*res://scripts/autoload/game_manager.gd"
 
 [display]

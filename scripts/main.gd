@@ -3,13 +3,18 @@ extends Node2D
 ## and reacts to run lifecycle events. Resumes a saved run on launch
 ## (GAME_DESIGN.md §5, §17, §24).
 
-const FALL_DEATH_Y := 900.0
+const FALL_LIMIT_Y := 900.0
+## Falling in a pit costs Coverage and drops you back on solid ground.
+## It never ends a run outright — that felt like a bug, not a challenge.
+const PIT_DAMAGE := 12
 
 @onready var room_container: Node2D = $RoomContainer
 @onready var player: Player = $Player
 @onready var hud := $HUD
 
 var current_room: Room
+var _safe_position: Vector2 = Vector2.ZERO
+var _safe_timer: float = 0.0
 
 
 func _ready() -> void:
@@ -20,10 +25,31 @@ func _ready() -> void:
 	_load_room(GameManager.current_room_path())
 
 
-func _physics_process(_delta: float) -> void:
-	# Safety net: falling out of a room is an uncovered loss.
-	if GameManager.run_active and player.global_position.y > FALL_DEATH_Y:
-		GameManager.damage(GameManager.coverage, "lost in an uncovered pit")
+func _physics_process(delta: float) -> void:
+	if not GameManager.run_active:
+		return
+	_track_safe_ground(delta)
+	if player.global_position.y > FALL_LIMIT_Y:
+		_recover_from_pit()
+
+
+## Remember the last place the player stood still enough to respawn onto.
+func _track_safe_ground(delta: float) -> void:
+	_safe_timer -= delta
+	if _safe_timer > 0.0 or not player.is_on_floor():
+		return
+	_safe_timer = 0.25
+	_safe_position = player.global_position
+
+
+func _recover_from_pit() -> void:
+	player.velocity = Vector2.ZERO
+	var target := _safe_position
+	if target == Vector2.ZERO:
+		target = current_room.spawn_point.global_position
+	player.global_position = target - Vector2(0.0, 24.0)
+	Juice.shake(6.0, 0.3)
+	GameManager.damage(PIT_DAMAGE, "swallowed by an uninsured sinkhole")
 
 
 func _load_room(path: String) -> void:
@@ -35,6 +61,8 @@ func _load_room(path: String) -> void:
 	player.global_position = current_room.spawn_point.global_position
 	player.velocity = Vector2.ZERO
 	player.set_physics_process(true)
+	_safe_position = current_room.spawn_point.global_position
+	_safe_timer = 0.0
 	Events.room_started.emit(path)
 
 

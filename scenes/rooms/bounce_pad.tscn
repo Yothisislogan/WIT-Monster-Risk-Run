@@ -1,0 +1,29 @@
+[gd_scene load_steps=3 format=3 uid="uid://witbounce00001"]
+
+[ext_resource type="Script" path="res://scripts/rooms/bounce_pad.gd" id="1_script"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_pad"]
+size = Vector2(76, 30)
+
+[node name="BouncePad" type="Area2D"]
+collision_layer = 0
+collision_mask = 2
+script = ExtResource("1_script")
+
+[node name="Pad" type="Node2D" parent="."]
+
+[node name="Cushion" type="Polygon2D" parent="Pad"]
+polygon = PackedVector2Array(-38, 4, -32, -12, 32, -12, 38, 4)
+color = Color(0.35, 0.8, 0.55, 1)
+
+[node name="Stripe" type="Polygon2D" parent="Pad"]
+polygon = PackedVector2Array(-30, -6, 30, -6, 30, -2, -30, -2)
+color = Color(0.9, 0.98, 0.92, 1)
+
+[node name="Base" type="Polygon2D" parent="Pad"]
+polygon = PackedVector2Array(-34, 4, 34, 4, 30, 14, -30, 14)
+color = Color(0.22, 0.45, 0.34, 1)
+
+[node name="Collision" type="CollisionShape2D" parent="."]
+position = Vector2(0, -2)
+shape = SubResource("RectangleShape2D_pad")

@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://witplayer00001"]
+[gd_scene load_steps=11 format=3 uid="uid://witplayer00001"]
 
 [ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
 [ext_resource type="Texture2D" path="res://icon.svg" id="2_icon"]
@@ -14,7 +14,13 @@ height = 44.0
 [sub_resource type="CircleShape2D" id="CircleShape2D_munch"]
 radius = 64.0
 
-[node name="Player" type="CharacterBody2D"]
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_stomp"]
+size = Vector2(30, 18)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_pound"]
+radius = 110.0
+
+[node name="Player" type="CharacterBody2D" groups=["player"]]
 collision_layer = 2
 collision_mask = 1
 script = ExtResource("1_player")
@@ -44,6 +50,22 @@ collision_mask = 4
 
 [node name="Collision" type="CollisionShape2D" parent="MunchArea"]
 shape = SubResource("CircleShape2D_munch")
+
+[node name="StompArea" type="Area2D" parent="."]
+position = Vector2(0, 24)
+collision_layer = 0
+collision_mask = 4
+
+[node name="Collision" type="CollisionShape2D" parent="StompArea"]
+shape = SubResource("RectangleShape2D_stomp")
+
+[node name="PoundArea" type="Area2D" parent="."]
+position = Vector2(0, 14)
+collision_layer = 0
+collision_mask = 68
+
+[node name="Collision" type="CollisionShape2D" parent="PoundArea"]
+shape = SubResource("CircleShape2D_pound")
 
 [node name="Camera" type="Camera2D" parent="."]
 position_smoothing_enabled = true

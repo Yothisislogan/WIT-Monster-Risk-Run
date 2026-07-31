@@ -1,0 +1,26 @@
+[gd_scene load_steps=3 format=3 uid="uid://witpremium0001"]
+
+[ext_resource type="Script" path="res://scripts/rooms/premium.gd" id="1_script"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_coin"]
+radius = 14.0
+
+[node name="Premium" type="Area2D"]
+collision_layer = 64
+collision_mask = 2
+script = ExtResource("1_script")
+
+[node name="Visual" type="Node2D" parent="."]
+
+[node name="Coin" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(-8, 0, -5, -8, 5, -8, 8, 0, 5, 8, -5, 8)
+color = Color(1, 0.82, 0.22, 1)
+
+[node name="Shine" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(-3, -5, 1, -5, -1, 4, -4, 4)
+color = Color(1, 0.96, 0.75, 1)
+
+[node name="Collision" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_coin")
+
+[connection signal="body_entered" from="." to="." method="_on_body_entered"]
