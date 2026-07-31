@@ -36,6 +36,8 @@ Phase 2/3 systems:
 - Touch controls (floating virtual stick + action buttons) and controller/keyboard
   through the same input action layer
 - Auto-pause on focus loss / app backgrounding
+- **8-bit chiptune soundtrack**: a distinct theme per Risk Zone plus a victory
+  cue, crossfaded between rooms, with a music toggle in the pause menu
 
 ## Getting started
 
@@ -75,6 +77,34 @@ scripts/
   ui/               HUD, touch controls
 assets/             Art and audio (placeholders during prototyping)
 ```
+
+## Music
+
+The soundtrack is synthesised from scratch — no sample libraries. `tools/generate_music.py`
+implements an NES-style chip: two pulse channels (variable duty), a quantised
+triangle bass and a 15-bit LFSR noise channel for drums. Each Risk Zone gets its
+own key, tempo and character:
+
+| Track | Level | Key | BPM | Character |
+| --- | --- | --- | --- | --- |
+| `blaze_borough` | 1. Blaze Borough | A minor | 150 | Heroic, driving |
+| `crashway_5000` | 2. Crashway 5000 | E minor | 168 | Fastest, relentless |
+| `storm_surge_harbor` | 3. Storm Surge Harbor | D minor | 132 | Rolling, moody |
+| `cyber_city` | 4. Cyber City | B minor | 160 | Staccato, glitchy |
+| `liability_land` | 5. Liability Land | C major | 145 | Bouncy, carnival |
+| `claim_victory` | end-of-run cue | C major | 150 | Short fanfare |
+
+Output is 8-bit 22050 Hz mono (~2.8 MB total) — genuinely 8-bit samples, which
+suits the style and halves the web download. Rendering is deterministic, so
+regenerating produces byte-identical files:
+
+```
+python3 tools/generate_music.py
+```
+
+To change a theme, edit its entry in `TRACKS` (melodies use a compact
+`Note:sixteenths` notation) and re-run. Tracks loop seamlessly: a 4 ms fade at
+each end lands the loop point on silence so the seam does not click.
 
 ## Movement budget (level design contract)
 

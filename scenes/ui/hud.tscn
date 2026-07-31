@@ -167,9 +167,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -200.0
-offset_top = -100.0
+offset_top = -140.0
 offset_right = 200.0
-offset_bottom = 100.0
+offset_bottom = 140.0
 
 [node name="Margin" type="MarginContainer" parent="Root/PausePanel"]
 theme_override_constants/margin_left = 24
@@ -190,3 +190,9 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 56)
 theme_override_font_sizes/font_size = 20
 text = "RESUME"
+
+[node name="MusicButton" type="Button" parent="Root/PausePanel/Margin/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 48)
+theme_override_font_sizes/font_size = 18
+text = "MUSIC: ON"

@@ -51,6 +51,18 @@ jobs:
           mkdir -p build/web
           godot --headless --export-release "Web" build/web/index.html
 
+      - name: Verify export contains assets
+        run: |
+          ls -la build/web
+          pck=$(du -cb build/web/*.pck 2>/dev/null | tail -1 | cut -f1 || echo 0)
+          echo "packed data: ${pck} bytes"
+          # the chiptune alone is ~2.8 MB, so anything under 2 MB means the
+          # audio (or more) failed to import and silently dropped out
+          if [ "${pck}" -lt 2000000 ]; then
+            echo "::error::export looks incomplete - assets missing from .pck"
+            exit 1
+          fi
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
