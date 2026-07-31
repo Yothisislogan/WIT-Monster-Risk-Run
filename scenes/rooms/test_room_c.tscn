@@ -1,21 +1,29 @@
-[gd_scene load_steps=10 format=3 uid="uid://witroomc00001"]
+[gd_scene load_steps=16 format=3 uid="uid://witroomc00001"]
 
 [ext_resource type="Script" path="res://scripts/rooms/room.gd" id="1_room"]
 [ext_resource type="PackedScene" path="res://scenes/enemies/toaster_trooper.tscn" id="2_trooper"]
 [ext_resource type="PackedScene" path="res://scenes/hazards/heat_vent.tscn" id="3_vent"]
-[ext_resource type="PackedScene" path="res://scenes/rooms/pickup_policy_card.tscn" id="4_pickup"]
+[ext_resource type="PackedScene" path="res://scenes/rooms/premium.tscn" id="4_premium"]
+[ext_resource type="PackedScene" path="res://scenes/rooms/crate.tscn" id="5_crate"]
+[ext_resource type="PackedScene" path="res://scenes/rooms/bounce_pad.tscn" id="6_pad"]
+[ext_resource type="PackedScene" path="res://scenes/rooms/moving_platform.tscn" id="7_movplat"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/ember_imp.tscn" id="8_imp"]
+[ext_resource type="PackedScene" path="res://scenes/rooms/pickup_policy_card.tscn" id="9_pickup"]
 
-[sub_resource type="RectangleShape2D" id="rect_floor_l"]
-size = Vector2(600, 60)
+[sub_resource type="RectangleShape2D" id="rect_ground_l"]
+size = Vector2(500, 60)
 
-[sub_resource type="RectangleShape2D" id="rect_floor_r"]
+[sub_resource type="RectangleShape2D" id="rect_ground_r"]
 size = Vector2(700, 60)
 
-[sub_resource type="RectangleShape2D" id="rect_plat"]
-size = Vector2(200, 32)
-
 [sub_resource type="RectangleShape2D" id="rect_wall"]
-size = Vector2(40, 700)
+size = Vector2(40, 900)
+
+[sub_resource type="RectangleShape2D" id="rect_p160"]
+size = Vector2(160, 32)
+
+[sub_resource type="RectangleShape2D" id="rect_p200"]
+size = Vector2(200, 32)
 
 [sub_resource type="RectangleShape2D" id="rect_exit"]
 size = Vector2(48, 96)
@@ -28,83 +36,171 @@ position = Vector2(100, 540)
 
 [node name="Platforms" type="Node2D" parent="."]
 
-[node name="FloorLeft" type="StaticBody2D" parent="Platforms"]
-position = Vector2(300, 630)
+[node name="GroundLeft" type="StaticBody2D" parent="Platforms"]
+position = Vector2(250, 630)
 
-[node name="Shape" type="CollisionShape2D" parent="Platforms/FloorLeft"]
-shape = SubResource("rect_floor_l")
+[node name="Shape" type="CollisionShape2D" parent="Platforms/GroundLeft"]
+shape = SubResource("rect_ground_l")
 
-[node name="Visual" type="Polygon2D" parent="Platforms/FloorLeft"]
-polygon = PackedVector2Array(-300, -30, 300, -30, 300, 30, -300, 30)
+[node name="Visual" type="Polygon2D" parent="Platforms/GroundLeft"]
+polygon = PackedVector2Array(-250, -30, 250, -30, 250, 30, -250, 30)
 color = Color(0.22, 0.32, 0.3, 1)
 
-[node name="FloorRight" type="StaticBody2D" parent="Platforms"]
+[node name="Trim" type="Polygon2D" parent="Platforms/GroundLeft"]
+polygon = PackedVector2Array(-250, -30, 250, -30, 250, -24, -250, -24)
+color = Color(0.36, 0.52, 0.48, 1)
+
+[node name="GroundRight" type="StaticBody2D" parent="Platforms"]
 position = Vector2(1250, 630)
 
-[node name="Shape" type="CollisionShape2D" parent="Platforms/FloorRight"]
-shape = SubResource("rect_floor_r")
+[node name="Shape" type="CollisionShape2D" parent="Platforms/GroundRight"]
+shape = SubResource("rect_ground_r")
 
-[node name="Visual" type="Polygon2D" parent="Platforms/FloorRight"]
+[node name="Visual" type="Polygon2D" parent="Platforms/GroundRight"]
 polygon = PackedVector2Array(-350, -30, 350, -30, 350, 30, -350, 30)
 color = Color(0.22, 0.32, 0.3, 1)
 
+[node name="Trim" type="Polygon2D" parent="Platforms/GroundRight"]
+polygon = PackedVector2Array(-350, -30, 350, -30, 350, -24, -350, -24)
+color = Color(0.36, 0.52, 0.48, 1)
+
 [node name="WallLeft" type="StaticBody2D" parent="Platforms"]
-position = Vector2(-20, 300)
+position = Vector2(-20, 250)
 
 [node name="Shape" type="CollisionShape2D" parent="Platforms/WallLeft"]
 shape = SubResource("rect_wall")
 
 [node name="Visual" type="Polygon2D" parent="Platforms/WallLeft"]
-polygon = PackedVector2Array(-20, -350, 20, -350, 20, 350, -20, 350)
+polygon = PackedVector2Array(-20, -450, 20, -450, 20, 450, -20, 450)
 color = Color(0.17, 0.25, 0.24, 1)
 
 [node name="WallRight" type="StaticBody2D" parent="Platforms"]
-position = Vector2(1620, 300)
+position = Vector2(1620, 250)
 
 [node name="Shape" type="CollisionShape2D" parent="Platforms/WallRight"]
 shape = SubResource("rect_wall")
 
 [node name="Visual" type="Polygon2D" parent="Platforms/WallRight"]
-polygon = PackedVector2Array(-20, -350, 20, -350, 20, 350, -20, 350)
+polygon = PackedVector2Array(-20, -450, 20, -450, 20, 450, -20, 450)
 color = Color(0.17, 0.25, 0.24, 1)
 
-[node name="GapBridge" type="StaticBody2D" parent="Platforms"]
-position = Vector2(750, 500)
+[node name="MidStep" type="StaticBody2D" parent="Platforms"]
+position = Vector2(700, 500)
 
-[node name="Shape" type="CollisionShape2D" parent="Platforms/GapBridge"]
-shape = SubResource("rect_plat")
+[node name="Shape" type="CollisionShape2D" parent="Platforms/MidStep"]
+shape = SubResource("rect_p160")
 
-[node name="Visual" type="Polygon2D" parent="Platforms/GapBridge"]
-polygon = PackedVector2Array(-100, -16, 100, -16, 100, 16, -100, 16)
+[node name="Visual" type="Polygon2D" parent="Platforms/MidStep"]
+polygon = PackedVector2Array(-80, -16, 80, -16, 80, 16, -80, 16)
 color = Color(0.3, 0.42, 0.4, 1)
 
-[node name="HighLedge" type="StaticBody2D" parent="Platforms"]
-position = Vector2(1150, 440)
+[node name="Trim" type="Polygon2D" parent="Platforms/MidStep"]
+polygon = PackedVector2Array(-80, -16, 80, -16, 80, -11, -80, -11)
+color = Color(0.46, 0.62, 0.58, 1)
 
-[node name="Shape" type="CollisionShape2D" parent="Platforms/HighLedge"]
-shape = SubResource("rect_plat")
+[node name="HighLeft" type="StaticBody2D" parent="Platforms"]
+position = Vector2(660, 320)
 
-[node name="Visual" type="Polygon2D" parent="Platforms/HighLedge"]
+[node name="Shape" type="CollisionShape2D" parent="Platforms/HighLeft"]
+shape = SubResource("rect_p160")
+
+[node name="Visual" type="Polygon2D" parent="Platforms/HighLeft"]
+polygon = PackedVector2Array(-80, -16, 80, -16, 80, 16, -80, 16)
+color = Color(0.46, 0.36, 0.55, 1)
+
+[node name="Trim" type="Polygon2D" parent="Platforms/HighLeft"]
+polygon = PackedVector2Array(-80, -16, 80, -16, 80, -11, -80, -11)
+color = Color(0.7, 0.56, 0.85, 1)
+
+[node name="HighRight" type="StaticBody2D" parent="Platforms"]
+position = Vector2(1120, 240)
+
+[node name="Shape" type="CollisionShape2D" parent="Platforms/HighRight"]
+shape = SubResource("rect_p200")
+
+[node name="Visual" type="Polygon2D" parent="Platforms/HighRight"]
 polygon = PackedVector2Array(-100, -16, 100, -16, 100, 16, -100, 16)
-color = Color(0.3, 0.42, 0.4, 1)
+color = Color(0.46, 0.36, 0.55, 1)
+
+[node name="Trim" type="Polygon2D" parent="Platforms/HighRight"]
+polygon = PackedVector2Array(-100, -16, 100, -16, 100, -11, -100, -11)
+color = Color(0.7, 0.56, 0.85, 1)
+
+[node name="Lift" parent="Platforms" instance=ExtResource("7_movplat")]
+position = Vector2(900, 420)
+travel = Vector2(0, -160)
+duration = 2.2
 
 [node name="Enemies" type="Node2D" parent="."]
 
-[node name="ToasterTrooper1" parent="Enemies" instance=ExtResource("2_trooper")]
-position = Vector2(400, 580)
+[node name="Trooper1" parent="Enemies" instance=ExtResource("2_trooper")]
+position = Vector2(360, 560)
 
-[node name="ToasterTrooper2" parent="Enemies" instance=ExtResource("2_trooper")]
-position = Vector2(1150, 400)
+[node name="Trooper2" parent="Enemies" instance=ExtResource("2_trooper")]
+position = Vector2(1150, 560)
+
+[node name="Trooper3" parent="Enemies" instance=ExtResource("2_trooper")]
+position = Vector2(1120, 200)
+
+[node name="Imp1" parent="Enemies" instance=ExtResource("8_imp")]
+position = Vector2(760, 380)
+
+[node name="Imp2" parent="Enemies" instance=ExtResource("8_imp")]
+position = Vector2(1300, 300)
 
 [node name="Hazards" type="Node2D" parent="."]
 
-[node name="HeatVent" parent="Hazards" instance=ExtResource("3_vent")]
-position = Vector2(1020, 600)
+[node name="Vent1" parent="Hazards" instance=ExtResource("3_vent")]
+position = Vector2(1000, 600)
+
+[node name="Vent2" parent="Hazards" instance=ExtResource("3_vent")]
+position = Vector2(1420, 600)
+
+[node name="Props" type="Node2D" parent="."]
+
+[node name="Crate1" parent="Props" instance=ExtResource("5_crate")]
+position = Vector2(180, 576)
+
+[node name="Crate2" parent="Props" instance=ExtResource("5_crate")]
+position = Vector2(1230, 576)
+
+[node name="Crate3" parent="Props" instance=ExtResource("5_crate")]
+position = Vector2(1230, 528)
+
+[node name="PadLeft" parent="Props" instance=ExtResource("6_pad")]
+position = Vector2(420, 594)
+
+[node name="PadRight" parent="Props" instance=ExtResource("6_pad")]
+position = Vector2(980, 594)
 
 [node name="Pickups" type="Node2D" parent="."]
 
-[node name="PickupPolicyCard" parent="Pickups" instance=ExtResource("4_pickup")]
-position = Vector2(750, 440)
+[node name="PolicyCard" parent="Pickups" instance=ExtResource("9_pickup")]
+position = Vector2(700, 450)
+
+[node name="Coin1" parent="Pickups" instance=ExtResource("4_premium")]
+position = Vector2(560, 470)
+
+[node name="Coin2" parent="Pickups" instance=ExtResource("4_premium")]
+position = Vector2(840, 470)
+
+[node name="Stash1" parent="Pickups" instance=ExtResource("4_premium")]
+position = Vector2(620, 270)
+
+[node name="Stash2" parent="Pickups" instance=ExtResource("4_premium")]
+position = Vector2(660, 270)
+
+[node name="Stash3" parent="Pickups" instance=ExtResource("4_premium")]
+position = Vector2(700, 270)
+
+[node name="Stash4" parent="Pickups" instance=ExtResource("4_premium")]
+position = Vector2(1080, 190)
+
+[node name="Stash5" parent="Pickups" instance=ExtResource("4_premium")]
+position = Vector2(1120, 190)
+
+[node name="Stash6" parent="Pickups" instance=ExtResource("4_premium")]
+position = Vector2(1160, 190)
 
 [node name="Exit" type="Area2D" parent="."]
 position = Vector2(1560, 550)
@@ -117,3 +213,7 @@ shape = SubResource("rect_exit")
 [node name="Visual" type="Polygon2D" parent="Exit"]
 polygon = PackedVector2Array(-24, -48, 24, -48, 24, 48, -24, 48)
 color = Color(0.12, 0.48, 0.88, 1)
+
+[node name="Glow" type="Polygon2D" parent="Exit"]
+polygon = PackedVector2Array(-14, -36, 14, -36, 14, 36, -14, 36)
+color = Color(0.55, 0.82, 1, 1)
