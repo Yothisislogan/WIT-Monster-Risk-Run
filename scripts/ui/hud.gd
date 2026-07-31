@@ -12,6 +12,7 @@ signal restart_requested
 @onready var ability_bar: ProgressBar = %AbilityBar
 @onready var ability_label: Label = %AbilityLabel
 @onready var currency_label: Label = %CurrencyLabel
+@onready var combo_label: Label = %ComboLabel
 @onready var claim_panel: PanelContainer = %ClaimPanel
 @onready var claim_text: Label = %ClaimText
 @onready var restart_button: Button = %RestartButton
@@ -28,6 +29,7 @@ func _ready() -> void:
 	Events.currency_changed.connect(_on_currency_changed)
 	Events.shield_changed.connect(_on_shield_changed)
 	Events.ability_energy_changed.connect(_on_ability_energy_changed)
+	Events.combo_changed.connect(_on_combo_changed)
 	Events.run_started.connect(_on_run_started)
 	Events.run_ended.connect(_on_run_ended)
 	restart_button.pressed.connect(func() -> void:
@@ -71,6 +73,20 @@ func _on_shield_changed(active: bool) -> void:
 	shield_label.visible = active
 
 
+## Adjuster's Streak: only appears once it matters, and fades as it expires
+## so the player feels the clock without a second bar cluttering the screen.
+func _on_combo_changed(count: int, ratio: float) -> void:
+	combo_label.visible = count >= 2
+	if not combo_label.visible:
+		return
+	combo_label.text = "STREAK x%d  (%dx PREMIUMS)" % [count, GameManager.combo_multiplier()]
+	combo_label.modulate.a = clampf(0.35 + ratio * 0.65, 0.0, 1.0)
+	if ratio >= 1.0:
+		combo_label.scale = Vector2(1.25, 1.25)
+		var tween := create_tween()
+		tween.tween_property(combo_label, "scale", Vector2.ONE, 0.18)
+
+
 func _on_ability_energy_changed(current: float, maximum: float) -> void:
 	ability_bar.max_value = maximum
 	ability_bar.value = current
@@ -94,6 +110,7 @@ func _format_report(report: Dictionary) -> String:
 		"Cause of loss: %s" % report.get("cause_of_loss", "unknown peril"),
 		"Rooms completed: %d" % report.get("rooms_completed", 0),
 		"Enemies defeated: %d" % report.get("enemies_defeated", 0),
+		"Best streak: x%d" % report.get("best_combo", 0),
 		"Damage taken: %d" % report.get("damage_taken", 0),
 		"Estimated property damage: $%s" % _with_commas(report.get("estimated_property_damage", 0)),
 		"",
