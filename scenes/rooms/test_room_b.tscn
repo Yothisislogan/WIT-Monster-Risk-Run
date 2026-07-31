@@ -70,7 +70,7 @@ polygon = PackedVector2Array(-20, -450, 20, -450, 20, 450, -20, 450)
 color = Color(0.26, 0.21, 0.2, 1)
 
 [node name="B1" type="StaticBody2D" parent="Platforms"]
-position = Vector2(250, 506)
+position = Vector2(500, 506)
 
 [node name="Shape" type="CollisionShape2D" parent="Platforms/B1"]
 shape = SubResource("rect_p200")
@@ -84,7 +84,7 @@ polygon = PackedVector2Array(-100, -16, 100, -16, 100, -11, -100, -11)
 color = Color(0.62, 0.5, 0.42, 1)
 
 [node name="B2" type="StaticBody2D" parent="Platforms"]
-position = Vector2(520, 420)
+position = Vector2(810, 420)
 
 [node name="Shape" type="CollisionShape2D" parent="Platforms/B2"]
 shape = SubResource("rect_p200")
@@ -98,7 +98,7 @@ polygon = PackedVector2Array(-100, -16, 100, -16, 100, -11, -100, -11)
 color = Color(0.62, 0.5, 0.42, 1)
 
 [node name="B3" type="StaticBody2D" parent="Platforms"]
-position = Vector2(250, 334)
+position = Vector2(1120, 334)
 
 [node name="Shape" type="CollisionShape2D" parent="Platforms/B3"]
 shape = SubResource("rect_p200")
@@ -111,22 +111,8 @@ color = Color(0.42, 0.34, 0.3, 1)
 polygon = PackedVector2Array(-100, -16, 100, -16, 100, -11, -100, -11)
 color = Color(0.62, 0.5, 0.42, 1)
 
-[node name="B4" type="StaticBody2D" parent="Platforms"]
-position = Vector2(520, 248)
-
-[node name="Shape" type="CollisionShape2D" parent="Platforms/B4"]
-shape = SubResource("rect_p200")
-
-[node name="Visual" type="Polygon2D" parent="Platforms/B4"]
-polygon = PackedVector2Array(-100, -16, 100, -16, 100, 16, -100, 16)
-color = Color(0.42, 0.34, 0.3, 1)
-
-[node name="Trim" type="Polygon2D" parent="Platforms/B4"]
-polygon = PackedVector2Array(-100, -16, 100, -16, 100, -11, -100, -11)
-color = Color(0.62, 0.5, 0.42, 1)
-
 [node name="ChimneyLeft" type="StaticBody2D" parent="Platforms"]
-position = Vector2(980, 450)
+position = Vector2(120, 450)
 
 [node name="Shape" type="CollisionShape2D" parent="Platforms/ChimneyLeft"]
 shape = SubResource("rect_chimney")
@@ -136,7 +122,7 @@ polygon = PackedVector2Array(-20, -150, 20, -150, 20, 150, -20, 150)
 color = Color(0.38, 0.3, 0.28, 1)
 
 [node name="ChimneyRight" type="StaticBody2D" parent="Platforms"]
-position = Vector2(1180, 450)
+position = Vector2(320, 450)
 
 [node name="Shape" type="CollisionShape2D" parent="Platforms/ChimneyRight"]
 shape = SubResource("rect_chimney")
@@ -146,7 +132,7 @@ polygon = PackedVector2Array(-20, -150, 20, -150, 20, 150, -20, 150)
 color = Color(0.38, 0.3, 0.28, 1)
 
 [node name="TopLedge" type="StaticBody2D" parent="Platforms"]
-position = Vector2(1400, 200)
+position = Vector2(1420, 250)
 
 [node name="Shape" type="CollisionShape2D" parent="Platforms/TopLedge"]
 shape = SubResource("rect_p240")
@@ -160,36 +146,36 @@ polygon = PackedVector2Array(-120, -16, 120, -16, 120, -11, -120, -11)
 color = Color(0.62, 0.5, 0.42, 1)
 
 [node name="MovingPlatform" parent="Platforms" instance=ExtResource("7_movplat")]
-position = Vector2(860, 232)
-travel = Vector2(300, 0)
-duration = 2.6
+position = Vector2(960, 470)
+travel = Vector2(0, -140)
+duration = 2.4
 
 [node name="Enemies" type="Node2D" parent="."]
 
 [node name="Trooper1" parent="Enemies" instance=ExtResource("2_trooper")]
-position = Vector2(700, 560)
+position = Vector2(950, 560)
 
 [node name="Trooper2" parent="Enemies" instance=ExtResource("2_trooper")]
-position = Vector2(520, 380)
+position = Vector2(810, 380)
 
 [node name="Trooper3" parent="Enemies" instance=ExtResource("2_trooper")]
-position = Vector2(250, 290)
+position = Vector2(1120, 294)
 
 [node name="Imp1" parent="Enemies" instance=ExtResource("8_imp")]
-position = Vector2(1080, 330)
+position = Vector2(700, 300)
 
 [node name="Hazards" type="Node2D" parent="."]
 
 [node name="Vent1" parent="Hazards" instance=ExtResource("3_vent")]
-position = Vector2(420, 600)
+position = Vector2(220, 600)
 
 [node name="Vent2" parent="Hazards" instance=ExtResource("3_vent")]
-position = Vector2(1080, 600)
+position = Vector2(1000, 600)
 
 [node name="Props" type="Node2D" parent="."]
 
 [node name="Crate1" parent="Props" instance=ExtResource("5_crate")]
-position = Vector2(880, 576)
+position = Vector2(790, 576)
 
 [node name="Crate2" parent="Props" instance=ExtResource("5_crate")]
 position = Vector2(1300, 576)
@@ -198,33 +184,33 @@ position = Vector2(1300, 576)
 position = Vector2(1348, 576)
 
 [node name="BouncePad" parent="Props" instance=ExtResource("6_pad")]
-position = Vector2(1500, 594)
+position = Vector2(660, 594)
 
 [node name="Pickups" type="Node2D" parent="."]
 
 [node name="Coin1" parent="Pickups" instance=ExtResource("4_premium")]
-position = Vector2(250, 450)
+position = Vector2(220, 360)
 
 [node name="Coin2" parent="Pickups" instance=ExtResource("4_premium")]
-position = Vector2(520, 364)
+position = Vector2(220, 300)
 
 [node name="Coin3" parent="Pickups" instance=ExtResource("4_premium")]
-position = Vector2(250, 278)
+position = Vector2(500, 450)
 
 [node name="Coin4" parent="Pickups" instance=ExtResource("4_premium")]
-position = Vector2(520, 192)
+position = Vector2(810, 364)
 
 [node name="Coin5" parent="Pickups" instance=ExtResource("4_premium")]
-position = Vector2(1080, 420)
+position = Vector2(1120, 278)
 
 [node name="Coin6" parent="Pickups" instance=ExtResource("4_premium")]
-position = Vector2(1080, 340)
+position = Vector2(1420, 194)
 
 [node name="Coin7" parent="Pickups" instance=ExtResource("4_premium")]
-position = Vector2(1080, 260)
+position = Vector2(1360, 194)
 
 [node name="Exit" type="Area2D" parent="."]
-position = Vector2(1400, 136)
+position = Vector2(1420, 186)
 collision_layer = 0
 collision_mask = 2
 

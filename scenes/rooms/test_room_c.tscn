@@ -99,7 +99,7 @@ polygon = PackedVector2Array(-80, -16, 80, -16, 80, -11, -80, -11)
 color = Color(0.46, 0.62, 0.58, 1)
 
 [node name="HighLeft" type="StaticBody2D" parent="Platforms"]
-position = Vector2(660, 320)
+position = Vector2(520, 320)
 
 [node name="Shape" type="CollisionShape2D" parent="Platforms/HighLeft"]
 shape = SubResource("rect_p160")
@@ -171,7 +171,7 @@ position = Vector2(1230, 528)
 position = Vector2(420, 594)
 
 [node name="PadRight" parent="Props" instance=ExtResource("6_pad")]
-position = Vector2(980, 594)
+position = Vector2(1300, 594)
 
 [node name="Pickups" type="Node2D" parent="."]
 
@@ -185,13 +185,13 @@ position = Vector2(560, 470)
 position = Vector2(840, 470)
 
 [node name="Stash1" parent="Pickups" instance=ExtResource("4_premium")]
-position = Vector2(620, 270)
+position = Vector2(480, 270)
 
 [node name="Stash2" parent="Pickups" instance=ExtResource("4_premium")]
-position = Vector2(660, 270)
+position = Vector2(520, 270)
 
 [node name="Stash3" parent="Pickups" instance=ExtResource("4_premium")]
-position = Vector2(700, 270)
+position = Vector2(560, 270)
 
 [node name="Stash4" parent="Pickups" instance=ExtResource("4_premium")]
 position = Vector2(1080, 190)

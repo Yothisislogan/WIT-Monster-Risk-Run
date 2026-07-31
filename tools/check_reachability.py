@@ -19,7 +19,9 @@ G_FALL       = 2100.0
 CAPSULE_HALF = 22.0     # collision capsule half height
 MARGIN       = 0.85     # only trust 85% of theoretical reach (mobile imprecision)
 
-SINGLE_RISE = JUMP_V ** 2 / (2 * G_RISE)              # 136.5
+SINGLE_RISE = JUMP_V ** 2 / (2 * G_RISE)              # 136.5 closed form
+# The apex hang (apex_gravity_scale 0.6 below |vy|<90) adds ~6px in practice.
+TRUE_SINGLE_RISE = SINGLE_RISE + 6.3                   # 142.8, tick-exact
 T_APEX_1    = JUMP_V / G_RISE                          # 0.427
 DJUMP_RISE  = DJUMP_V ** 2 / (2 * G_RISE)              # 112.1
 DOUBLE_RISE = SINGLE_RISE + DJUMP_RISE                 # 248.6
@@ -68,7 +70,7 @@ def parse_room(path):
             tx, ty = (float(tv.group(1)), float(tv.group(2))) if tv else (0.0, 0.0)
             for ox, oy in ((0.0, 0.0), (tx, ty)):
                 surfaces.append({"name": f"{name}@{int(ox)},{int(oy)}",
-                                 "top": py + oy - h / 2,
+                                 "top": py + oy - h / 2, "h": h,
                                  "x0": px + ox - w / 2, "x1": px + ox + w / 2})
             continue
 
@@ -92,7 +94,7 @@ def parse_room(path):
         w, h = shapes[sm.group(1)]
         if h > w:      # tall+thin == wall, not a standing surface
             continue
-        surfaces.append({"name": name, "top": py - h / 2,
+        surfaces.append({"name": name, "top": py - h / 2, "h": h,
                          "x0": px - w / 2, "x1": px + w / 2})
     return surfaces, spawn, exit_rect
 
@@ -150,6 +152,32 @@ def analyse(path):
                         best = ((rise, run), o["name"])
             detail = f" closest from {best[1]}: rise {best[0][0]:.0f}px run {best[0][1]:.0f}px" if best else ""
             problems.append(f"{path.name}: UNREACHABLE platform '{s['name']}' (top y={s['top']:.0f}).{detail}")
+
+    # Overhang check: jumping straight up under a platform bonks its underside.
+    # If a higher platform shadows most of a launch platform there is nowhere
+    # to jump from, even when the reach maths says the target is in range.
+    for a in surfaces:
+        if a["name"] not in reached:
+            continue
+        width = a["x1"] - a["x0"]
+        apex_head = (a["top"] - CAPSULE_HALF) - TRUE_SINGLE_RISE - CAPSULE_HALF
+        for b in surfaces:
+            if b is a or b["top"] >= a["top"]:
+                continue
+            # the two travel extremes of one moving platform are the same object
+            if a["name"].split("@")[0] == b["name"].split("@")[0]:
+                continue
+            if apex_head >= b["top"] + b["h"]:
+                continue  # head stays below the underside, no contact
+            overlap = min(a["x1"], b["x1"]) - max(a["x0"], b["x0"])
+            if overlap <= 0:
+                continue
+            clear = width - overlap
+            if clear < 80.0:
+                problems.append(
+                    f"{path.name}: OVERHANG - jumping from '{a['name']}' hits "
+                    f"'{b['name']}' underside; only {clear:.0f}px of clear launch "
+                    f"space (need >=80px)")
 
     if exit_rect:
         ex0, ex1, ey0, ey1 = exit_rect
