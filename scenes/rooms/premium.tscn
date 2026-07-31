@@ -23,4 +23,8 @@ color = Color(1, 0.96, 0.75, 1)
 [node name="Collision" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_coin")
 
+[node name="GroundProbe" type="RayCast2D" parent="."]
+target_position = Vector2(0, 40)
+collision_mask = 1
+
 [connection signal="body_entered" from="." to="." method="_on_body_entered"]
