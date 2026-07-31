@@ -18,6 +18,7 @@ signal restart_requested
 @onready var restart_button: Button = %RestartButton
 @onready var pause_panel: PanelContainer = %PausePanel
 @onready var resume_button: Button = %ResumeButton
+@onready var music_button: Button = %MusicButton
 
 
 func _ready() -> void:
@@ -36,6 +37,17 @@ func _ready() -> void:
 		claim_panel.visible = false
 		restart_requested.emit())
 	resume_button.pressed.connect(func() -> void: get_tree().paused = false)
+	music_button.pressed.connect(_on_music_pressed)
+	_refresh_music_button()
+
+
+func _on_music_pressed() -> void:
+	MusicManager.toggle()
+	_refresh_music_button()
+
+
+func _refresh_music_button() -> void:
+	music_button.text = "MUSIC: ON" if MusicManager.enabled else "MUSIC: OFF"
 
 
 func _process(_delta: float) -> void:
