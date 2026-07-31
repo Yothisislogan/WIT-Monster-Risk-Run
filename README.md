@@ -8,16 +8,28 @@ This repository currently contains the **MVP prototype** described in
 [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) (see sections 26, 28, and 32), plus the first
 Phase 2/3 systems:
 
-- WIT Monster movement: run, variable-height jump, dash, wall cling, wall jump
+- WIT Monster movement: run, variable-height jump, **double jump**, dash,
+  wall cling, wall jump, **ground pound**
 - Mobile-friendly input buffering (jump buffer, coyote time, dash buffer, landing attack buffer)
 - Base weapon: tap-to-shoot projectile, hold-to-charge piercing shot (pooled projectiles)
+- **Stomping**: land on an enemy to damage it and bounce; hold jump for a
+  higher bounce, and a stomp refunds your double jump so you can chain
+- **Adjuster's Streak**: chained takedowns multiply Premiums, and a single
+  hit ends the streak
 - Monster Munch: weakened enemies (tinted green) can be consumed to restore
   Coverage and charge the boss ability meter
 - Flame Draft boss ability: spends ability energy to fire a piercing blast
   that ignites enemies (burn damage over time)
 - Coverage meter and boss ability meter HUD
-- One enemy (Toaster Trooper) and one hazard (Heat Vent)
-- Three handcrafted room modules shuffled into a randomized sequence each run
+- One hazard (Heat Vent) with a telegraphed warn-then-burst cycle
+- Three handcrafted room modules shuffled into a randomized sequence each run,
+  each with an optional double-jump-only treasure route
+- Bounce pads (ground pound them for a super launch), breakable crates,
+  Premium coin pickups with magnet collection, and moving platforms
+- Two enemy types: Toaster Trooper (patrol) and Ember Imp (flying, telegraphed
+  dive that can be cancelled by shooting it)
+- Falling in a pit costs Coverage and drops you back on solid ground instead
+  of ending the run
 - One temporary upgrade pickup (Umbrella Coverage — blocks one hit)
 - Save and resume after every completed room (versioned JSON save; the shuffled
   room sequence is saved so resuming never re-rolls a room)
@@ -43,6 +55,7 @@ Phase 2/3 systems:
 | Dash    | K / Shift         | B (right)         |
 | Special | L                 | Y (top)           |
 | Munch   | E                 | Right shoulder    |
+| Pound   | Down + Jump (in air) | Down + A       |
 | Pause   | Esc               | Start             |
 
 On touch devices the virtual controls appear automatically; on desktop they stay hidden.
@@ -62,6 +75,24 @@ scripts/
   ui/               HUD, touch controls
 assets/             Art and audio (placeholders during prototyping)
 ```
+
+## Movement budget (level design contract)
+
+Levels are built against these numbers from `scripts/player/player.gd`. If you
+retune the jump, re-run `python3 tools/check_reachability.py` before shipping rooms —
+it parses every room scene and BFS's the platform graph to prove the exit is
+reachable from the spawn.
+
+| Quantity | Value |
+| --- | --- |
+| Single jump rise | 136px |
+| Double jump rise | 249px |
+| Flat gap, single jump | ~240px |
+| Flat gap, double jump | ~400px |
+| Dash distance | ~125px |
+
+Required paths use 86-110px rises and <=220px gaps. Optional treasure routes
+are allowed to need the double jump.
 
 ## Design pillars (do not drift)
 

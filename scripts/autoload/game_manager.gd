@@ -15,6 +15,10 @@ const ROOM_POOL: Array[String] = [
 const BASE_COVERAGE := 100
 const MAX_ABILITY_ENERGY := 100.0
 const ABILITY_COST := 40.0
+## Chaining takedowns builds an "Adjuster's Streak": more Premiums per kill,
+## and it drops the moment you take a hit. Reckless play pays (§11).
+const COMBO_WINDOW := 3.0
+const COMBO_MAX_MULTIPLIER := 5
 
 var max_coverage: int = BASE_COVERAGE
 var coverage: int = BASE_COVERAGE
@@ -25,6 +29,10 @@ var room_sequence: Array = []
 var room_index: int = 0
 var run_active: bool = false
 var last_damage_source: String = "unknown peril"
+
+var combo: int = 0
+var combo_timer: float = 0.0
+var best_combo: int = 0
 
 var stats := {
 	"rooms_completed": 0,
@@ -37,6 +45,32 @@ var stats := {
 func _ready() -> void:
 	# Keep receiving focus notifications while the tree is paused.
 	process_mode = Node.PROCESS_MODE_ALWAYS
+
+
+func _process(delta: float) -> void:
+	if combo <= 0:
+		return
+	combo_timer = maxf(combo_timer - delta, 0.0)
+	Events.combo_changed.emit(combo, combo_timer / COMBO_WINDOW)
+	if combo_timer <= 0.0:
+		_reset_combo()
+
+
+func bump_combo() -> void:
+	combo += 1
+	best_combo = maxi(best_combo, combo)
+	combo_timer = COMBO_WINDOW
+	Events.combo_changed.emit(combo, 1.0)
+
+
+func _reset_combo() -> void:
+	combo = 0
+	combo_timer = 0.0
+	Events.combo_changed.emit(0, 0.0)
+
+
+func combo_multiplier() -> int:
+	return clampi(1 + combo / 3, 1, COMBO_MAX_MULTIPLIER)
 
 
 func _notification(what: int) -> void:
@@ -55,6 +89,9 @@ func start_new_run() -> void:
 	currency = 0
 	umbrella_active = false
 	ability_energy = 0.0
+	combo = 0
+	combo_timer = 0.0
+	best_combo = 0
 	room_sequence = ROOM_POOL.duplicate()
 	room_sequence.shuffle()
 	room_index = 0
@@ -75,6 +112,8 @@ func resume_run() -> bool:
 	currency = int(run.get("currency", 0))
 	umbrella_active = bool(run.get("umbrella_active", false))
 	ability_energy = clampf(float(run.get("ability_energy", 0.0)), 0.0, MAX_ABILITY_ENERGY)
+	best_combo = int(run.get("best_combo", 0))
+	_reset_combo()
 	# Drop any rooms that no longer exist in the pool (renamed between builds).
 	room_sequence = run.get("room_sequence", []).filter(func(p: Variant) -> bool: return p in ROOM_POOL)
 	if room_sequence.is_empty():
@@ -118,6 +157,7 @@ func save_checkpoint() -> void:
 		"currency": currency,
 		"umbrella_active": umbrella_active,
 		"ability_energy": ability_energy,
+		"best_combo": best_combo,
 		"room_sequence": room_sequence,
 		"room_index": room_index,
 		"stats": stats,
@@ -144,6 +184,7 @@ func damage(amount: int, source: String) -> void:
 		Events.shield_changed.emit(false)
 		return
 	last_damage_source = source
+	_reset_combo()  # getting hit ends the streak
 	coverage = maxi(coverage - amount, 0)
 	stats["damage_taken"] = int(stats["damage_taken"]) + amount
 	Events.player_damaged.emit(amount, source)
@@ -159,7 +200,7 @@ func heal(amount: int) -> void:
 
 
 func add_currency(amount: int) -> void:
-	currency += amount
+	currency += amount * combo_multiplier()
 	Events.currency_changed.emit(currency)
 
 
@@ -172,6 +213,7 @@ func grant_umbrella() -> void:
 func record_enemy_defeated() -> void:
 	stats["enemies_defeated"] = int(stats["enemies_defeated"]) + 1
 	add_ability_energy(10.0)
+	bump_combo()
 
 
 ## Monster Munch (§7): consuming a weakened enemy restores a little
@@ -180,6 +222,7 @@ func record_enemy_consumed() -> void:
 	stats["enemies_consumed"] = int(stats["enemies_consumed"]) + 1
 	heal(10)
 	add_ability_energy(25.0)
+	bump_combo()
 
 
 func add_ability_energy(amount: float) -> void:
@@ -207,6 +250,7 @@ func build_claim_report(victory: bool) -> Dictionary:
 		"damage_taken": taken,
 		"enemies_defeated": int(stats["enemies_defeated"]),
 		"enemies_consumed": int(stats["enemies_consumed"]),
+		"best_combo": best_combo,
 		"estimated_property_damage": property_damage,
 		"claim_status": "Approved. Somehow." if victory else "Under review.",
 		"victory": victory,

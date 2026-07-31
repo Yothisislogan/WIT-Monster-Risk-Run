@@ -1,0 +1,57 @@
+[gd_scene load_steps=5 format=3 uid="uid://witemberimp001"]
+
+[ext_resource type="Script" path="res://scripts/enemies/ember_imp.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://scenes/rooms/premium.tscn" id="2_premium"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_body"]
+radius = 15.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_hit"]
+radius = 19.0
+
+[node name="EmberImp" type="CharacterBody2D"]
+collision_layer = 4
+collision_mask = 1
+script = ExtResource("1_script")
+max_health = 20
+contact_damage = 12
+currency_reward = 6
+defeat_source = "dive-bombed by an Ember Imp"
+premium_scene = ExtResource("2_premium")
+premium_drops = 2
+death_color = Color(1, 0.45, 0.15, 1)
+
+[node name="Visual" type="Node2D" parent="."]
+
+[node name="WingLeft" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(-6, -4, -22, -14, -20, 2)
+color = Color(0.95, 0.6, 0.2, 1)
+
+[node name="WingRight" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(6, -4, 22, -14, 20, 2)
+color = Color(0.95, 0.6, 0.2, 1)
+
+[node name="Body" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(-12, 0, -7, -12, 7, -12, 12, 0, 6, 12, -6, 12)
+color = Color(0.95, 0.32, 0.12, 1)
+
+[node name="EyeLeft" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(-7, -5, -2, -5, -2, 0, -7, 0)
+color = Color(1, 0.95, 0.7, 1)
+
+[node name="EyeRight" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(2, -5, 7, -5, 7, 0, 2, 0)
+color = Color(1, 0.95, 0.7, 1)
+
+[node name="Collision" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_body")
+
+[node name="Hitbox" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="Collision" type="CollisionShape2D" parent="Hitbox"]
+shape = SubResource("CircleShape2D_hit")
+
+[node name="OnScreen" type="VisibleOnScreenNotifier2D" parent="."]
+rect = Rect2(-30, -24, 60, 48)

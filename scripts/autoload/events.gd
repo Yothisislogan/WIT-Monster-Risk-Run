@@ -9,6 +9,7 @@ signal player_died(cause: String)
 signal shield_changed(active: bool)
 signal charge_changed(ratio: float)
 signal ability_energy_changed(current: float, maximum: float)
+signal combo_changed(count: int, ratio: float)
 
 # Economy / upgrades
 signal currency_changed(amount: int)

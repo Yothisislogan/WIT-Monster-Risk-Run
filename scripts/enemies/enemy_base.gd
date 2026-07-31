@@ -9,6 +9,10 @@ extends CharacterBody2D
 @export var defeat_source: String = "unknown enemy"
 ## Below this health fraction the enemy is weakened and can be Munched (§7).
 @export var weaken_ratio: float = 0.4
+## Premiums scattered on defeat. Falls back to silent currency if unset.
+@export var premium_scene: PackedScene
+@export var premium_drops: int = 2
+@export var death_color: Color = Color(1.0, 0.55, 0.25)
 
 var health: int
 var weakened: bool = false
@@ -79,7 +83,7 @@ func consume() -> void:
 
 ## Override for hit feedback (flash, sound, knockback).
 func _on_damaged() -> void:
-	pass
+	Juice.hit_spark(global_position)
 
 
 ## Override to show the munchable state (tint, wobble).
@@ -94,5 +98,23 @@ func _on_burn_changed(_burning: bool) -> void:
 
 func die() -> void:
 	GameManager.record_enemy_defeated()
-	GameManager.add_currency(currency_reward)
+	Juice.enemy_death(global_position, death_color)
+	Juice.shake(4.0, 0.2)
+	_drop_premiums()
 	queue_free()
+
+
+func _drop_premiums() -> void:
+	if premium_scene == null:
+		GameManager.add_currency(currency_reward)
+		return
+	var parent := get_parent()
+	if parent == null:
+		GameManager.add_currency(currency_reward)
+		return
+	for i in premium_drops:
+		var premium: Node2D = premium_scene.instantiate()
+		premium.global_position = global_position
+		var spread := float(i) / maxf(float(premium_drops - 1), 1.0) - 0.5
+		premium.pop(Vector2(spread * 200.0, -300.0))
+		parent.add_child(premium)

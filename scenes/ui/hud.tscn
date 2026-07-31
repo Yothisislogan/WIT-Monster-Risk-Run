@@ -104,6 +104,22 @@ theme_override_font_sizes/font_size = 22
 text = "$ 0"
 horizontal_alignment = 2
 
+[node name="ComboLabel" type="Label" parent="Root"]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -340.0
+offset_top = 56.0
+offset_right = -24.0
+offset_bottom = 84.0
+pivot_offset = Vector2(316, 14)
+theme_override_colors/font_color = Color(1, 0.78, 0.25, 1)
+theme_override_font_sizes/font_size = 18
+text = "STREAK x2  (1x PREMIUMS)"
+horizontal_alignment = 2
+
 [node name="ClaimPanel" type="PanelContainer" parent="Root"]
 unique_name_in_owner = true
 visible = false

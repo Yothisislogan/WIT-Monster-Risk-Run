@@ -28,9 +28,12 @@ var _base_tint := Color.WHITE
 
 
 func _on_damaged() -> void:
+	super._on_damaged()
 	visual.modulate = Color(3.0, 3.0, 3.0)
+	visual.scale = Vector2(1.25, 0.78)
 	var tween := create_tween()
 	tween.tween_property(visual, "modulate", _base_tint, 0.15)
+	tween.parallel().tween_property(visual, "scale", Vector2.ONE, 0.18)
 
 
 func _on_weakened() -> void:
