@@ -679,7 +679,10 @@ func cycle_ability() -> void:
 ## Non-empty once you hold every ability of a known combination, which changes
 ## how the equipped ability behaves rather than adding a fourth button.
 func active_combo() -> Dictionary:
-	return Abilities.combo_for(abilities)
+	# Passing the equipped id makes the combo follow what you have selected,
+	# so cycling abilities with three absorbed changes which pair is live
+	# rather than leaving it on whichever one sorted first.
+	return Abilities.combo_for(abilities, current_ability())
 
 
 # --- Combo -----------------------------------------------------------------

@@ -12,6 +12,11 @@ green, every build was green, and three scripts had not parsed for weeks:
     which already has a native `gravity`.
   * hud.gd called `get_viewport_rect()` while extending CanvasLayer, which is
     a Node and not a CanvasItem.
+  * title_monster.gd wrote `const BODY := PackedVector2Array([...])`. The
+    packed-array constructors are function calls, not constant expressions, so
+    a const cannot hold one — while `Vector2(...)`, `Color(...)` and `Rect2(...)`
+    are compile-time values and can. That distinction is invisible in the
+    source and the file simply refuses to parse.
 
 None of those are visible to a checker that reads source as text and knows
 nothing about Godot's class hierarchy. So this one carries a small, curated
@@ -246,6 +251,16 @@ def split_args(text: str) -> list[str]:
     return [a for a in args if a]
 
 
+## Constructors that are NOT constant expressions, so `const X := Name(...)`
+## is a parse error. Vector2/Vector3/Color/Rect2/Transform2D and friends are
+## compile-time values and are deliberately absent.
+NON_CONST_INIT = re.compile(
+    r"^const (\w+)(?:: *[\w\[\]]+)? *:?= *"
+    r"(Packed(?:Byte|Int32|Int64|Float32|Float64|String|Vector2|Vector3|Vector4|Color)Array"
+    r"|Array|Dictionary)\(",
+    re.MULTILINE)
+
+
 def main() -> int:
     # Inheritance is read from the raw text: `extends "res://..."` is a string
     # literal, and strip_code would blank the very path we need.
@@ -279,6 +294,19 @@ def main() -> int:
     problems: list[str] = []
     resolved = 0
     unknown_bases: set[str] = set()
+
+    # A const must be a compile-time value. The built-in maths types are; the
+    # packed arrays and the containers are constructor calls and are not.
+    for path, text in sources.items():
+        rel = path[len("res://"):]
+        for match in NON_CONST_INIT.finditer(text):
+            line = text.count("\n", 0, match.start()) + 1
+            problems.append(
+                f"{rel}:{line}: `const {match.group(1)}` is initialised with "
+                f"{match.group(2)}(...), which is a constructor call and not a "
+                f"constant expression — Godot rejects the whole file. Use a "
+                f"plain literal: `const {match.group(1)}: Array[Vector2] = [...]` "
+                f"for packed arrays, `[...]` or `{{...}}` for containers")
 
     for path, text in sources.items():
         rel = path[len("res://"):]

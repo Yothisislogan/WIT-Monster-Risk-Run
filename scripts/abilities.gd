@@ -8,6 +8,8 @@ extends RefCounted
 
 const FLAME_DRAFT := "flame_draft"
 const IMPACT_DASH := "impact_dash"
+const RISK_POOL := "risk_pool"
+const UNDERTOW := "undertow"
 
 const ABILITIES := {
 	FLAME_DRAFT: {
@@ -22,14 +24,49 @@ const ABILITIES := {
 		"cost": 35.0,
 		"color": Color(0.6, 0.78, 1.0),
 	},
+	RISK_POOL: {
+		"name": "RISK POOL",
+		"blurb": "Drops a column of liabilities on whatever you aim at.",
+		"cost": 45.0,
+		"color": Color(0.72, 0.66, 1.0),
+	},
+	UNDERTOW: {
+		"name": "UNDERTOW",
+		"blurb": "Drags every peril within reach into Munch range, hurt.",
+		"cost": 38.0,
+		"color": Color(0.36, 0.78, 0.86),
+	},
 }
 
 ## §14: holding two abilities creates a third behaviour rather than just
-## letting you pick. Keys are sorted id pairs.
+## letting you pick. Keys are sorted id pairs. Every pair has an entry —
+## tools/check_bosses.py fails if one is missing, because a missing pair is
+## invisible in play: the player simply never sees a combo and cannot tell
+## whether that is the design or a gap.
 const COMBOS := {
 	"flame_draft|impact_dash": {
 		"name": "MELTDOWN CHARGE",
 		"blurb": "The dash ignites everything along its path.",
+	},
+	"flame_draft|risk_pool": {
+		"name": "FIRE SALE",
+		"blurb": "Dropped liabilities burst into flame where they land.",
+	},
+	"flame_draft|undertow": {
+		"name": "STEAM CLAIM",
+		"blurb": "Everything dragged in arrives already burning.",
+	},
+	"impact_dash|risk_pool": {
+		"name": "TOTAL LOSS",
+		"blurb": "The charge shatters liabilities into a second wave.",
+	},
+	"impact_dash|undertow": {
+		"name": "RIPTIDE CHARGE",
+		"blurb": "The charge drags in everything it passes.",
+	},
+	"risk_pool|undertow": {
+		"name": "SETTLEMENT SPIRAL",
+		"blurb": "Dragged perils are pinned under the falling column.",
 	},
 }
 
@@ -42,11 +79,29 @@ static func cost(id: String) -> float:
 	return float(entry(id).get("cost", 40.0))
 
 
-static func combo_for(owned: Array) -> Dictionary:
+## The combo formed by what you are holding.
+##
+## This used to sort every owned id and look the joined string up directly,
+## which worked with exactly two abilities and silently stopped the moment you
+## beat a second boss: three ids join to "a|b|c", no key matches, and MELTDOWN
+## CHARGE quietly went away at the point the player had earned the most. Every
+## pair is considered now, and `equipped` breaks the tie so the combo follows
+## the ability actually selected.
+static func combo_for(owned: Array, equipped: String = "") -> Dictionary:
 	if owned.size() < 2:
 		return {}
-	var sorted_ids := PackedStringArray()
+	var ids := PackedStringArray()
 	for id in owned:
-		sorted_ids.append(String(id))
-	sorted_ids.sort()
-	return COMBOS.get("|".join(sorted_ids), {})
+		ids.append(String(id))
+	ids.sort()
+	var fallback := {}
+	for i in ids.size():
+		for j in range(i + 1, ids.size()):
+			var found: Dictionary = COMBOS.get("%s|%s" % [ids[i], ids[j]], {})
+			if found.is_empty():
+				continue
+			if equipped != "" and (ids[i] == equipped or ids[j] == equipped):
+				return found
+			if fallback.is_empty():
+				fallback = found
+	return fallback

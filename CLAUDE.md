@@ -32,7 +32,7 @@ Run them all before committing:
 
 ```
 for t in references godot_api scenes signals inputs gestures movement aim \
-         map sites meta reachability pickups economy text_fit title; do python3 tools/check_$t.py || break; done
+         map sites meta reachability pickups economy text_fit title bosses; do python3 tools/check_$t.py || break; done
 ```
 
 ## Architecture rules the codebase actually follows

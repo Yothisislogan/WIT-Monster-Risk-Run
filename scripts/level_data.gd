@@ -47,6 +47,12 @@ const ROOMS := {
 		"music": "boss_theme",
 			"backdrop": Color(0.46, 0.14, 0.12),
 	},
+	"boss_high_water_mark": {
+		"name": "THE HIGH-WATER MARK",
+		"subtitle": "The flood exclusion applies",
+		"music": "boss_theme",
+			"backdrop": Color(0.10, 0.28, 0.38),
+	},
 }
 
 ## Room scenes a combat node can draw. Kept here rather than in GameManager so
@@ -60,13 +66,14 @@ const COMBAT_ROOMS: Array[String] = [
 	"res://scenes/rooms/test_room_e.tscn",
 ]
 
-## Bosses in act order, cycled. With three acts and two bosses a run does see
-## one of them twice — but cycling rather than clamping means never twice in a
-## row, and the Risk Meter has moved a long way by the third act. Adding a
-## third boss is one line here and the repeat disappears.
+## Bosses in act order, cycled. Three acts and three bosses, so a run now sees
+## each one exactly once and never the same fight twice — which is what the
+## note here used to be waiting for. Each grants a different absorbed ability,
+## so the order you meet them in is also the order your kit arrives in (§12).
 const BOSS_ROOMS: Array[String] = [
-	"res://scenes/rooms/boss_actuary.tscn",
 	"res://scenes/rooms/boss_inferno_adjuster.tscn",
+	"res://scenes/rooms/boss_high_water_mark.tscn",
+	"res://scenes/rooms/boss_actuary.tscn",
 ]
 
 const FALLBACK := {

@@ -303,9 +303,12 @@ func die() -> void:
 	Events.boss_health_changed.emit(0, max_health)
 	GameManager.record_enemy_defeated()
 	GameManager.record_boss_defeated()
-	# Absorbing the boss's power is the reward for the fight (§12), and the
-	# second ability is what unlocks a combination (§14).
-	GameManager.grant_ability(Abilities.IMPACT_DASH)
+	# Absorbing the boss's power is the reward for the fight (§12). This used
+	# to grant IMPACT_DASH — the Inferno Adjuster's power — so beating the
+	# second boss handed you something you already had, and with two bosses
+	# granting one ability between them the combination system (§14) had
+	# exactly one reachable pair. Risk Pool is this fight's own attack.
+	GameManager.grant_ability(Abilities.RISK_POOL)
 	Sfx.play("room_clear")
 	Juice.shake(14.0, 0.9)
 	Juice.hit_stop(0.12)

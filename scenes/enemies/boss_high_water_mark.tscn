@@ -1,0 +1,78 @@
+[gd_scene load_steps=6 format=3 uid="uid://witbosshwm001"]
+
+[ext_resource type="Script" path="res://scripts/enemies/boss_high_water_mark.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/fireball.tscn" id="2_fireball"]
+[ext_resource type="PackedScene" path="res://scenes/rooms/premium.tscn" id="3_premium"]
+
+[sub_resource type="RectangleShape2D" id="rect_body"]
+size = Vector2(92, 100)
+
+[sub_resource type="RectangleShape2D" id="rect_tide"]
+size = Vector2(1600, 100)
+
+[node name="BossHighWaterMark" type="CharacterBody2D" groups=["boss"]]
+collision_layer = 4
+collision_mask = 1
+script = ExtResource("1_script")
+max_health = 440
+contact_damage = 13
+currency_reward = 60
+defeat_source = "washed out by the High-Water Mark"
+weaken_ratio = 0.0
+premium_scene = ExtResource("3_premium")
+premium_drops = 8
+death_color = Color(0.4, 0.8, 0.95, 1)
+always_active = true
+fireball_scene = ExtResource("2_fireball")
+
+[node name="Visual" type="Node2D" parent="."]
+
+[node name="Swell" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(-52, 50, -44, -18, -24, -44, 24, -44, 44, -18, 52, 50)
+color = Color(0.09, 0.26, 0.38, 1)
+
+[node name="Body" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(-36, 42, -30, -16, -14, -38, 14, -38, 30, -16, 36, 42)
+color = Color(0.16, 0.52, 0.66, 1)
+
+[node name="Crest" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(-30, -34, -16, -56, -2, -36, 12, -58, 26, -34)
+color = Color(0.7, 0.95, 1, 1)
+
+[node name="Gauge" type="Polygon2D" parent="Visual"]
+position = Vector2(0, 6)
+polygon = PackedVector2Array(-18, -14, 18, -14, 18, 14, -18, 14)
+color = Color(0.86, 0.92, 0.96, 1)
+
+[node name="GaugeLine" type="Polygon2D" parent="Visual"]
+position = Vector2(0, 2)
+polygon = PackedVector2Array(-18, -2, 18, -2, 18, 2, -18, 2)
+color = Color(0.12, 0.3, 0.44, 1)
+
+[node name="Collision" type="CollisionShape2D" parent="."]
+shape = SubResource("rect_body")
+
+[node name="Hitbox" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="Collision" type="CollisionShape2D" parent="Hitbox"]
+shape = SubResource("rect_body")
+
+[node name="Tide" type="Node2D" parent="."]
+top_level = true
+position = Vector2(800, 600)
+
+[node name="TideVisual" type="Polygon2D" parent="Tide"]
+polygon = PackedVector2Array(-800, -100, 800, -100, 800, 0, -800, 0)
+color = Color(0.24, 0.62, 0.86, 0.55)
+
+[node name="TideArea" type="Area2D" parent="Tide"]
+collision_layer = 0
+collision_mask = 2
+
+[node name="Collision" type="CollisionShape2D" parent="Tide/TideArea"]
+shape = SubResource("rect_tide")
+
+[node name="OnScreen" type="VisibleOnScreenNotifier2D" parent="."]
+rect = Rect2(-60, -60, 120, 120)

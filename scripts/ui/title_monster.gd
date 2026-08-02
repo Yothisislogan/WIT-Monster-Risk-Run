@@ -51,46 +51,46 @@ const CLAW := Color(0.92, 0.95, 1.0, 1.0)
 ## The rim light is the Risk moon behind the right shoulder catching the edge.
 const RIM := Color(1.0, 0.80, 0.46, 0.85)
 
-const BODY := PackedVector2Array([
+const BODY: Array[Vector2] = [
 	Vector2(-96, 4), Vector2(-116, -60), Vector2(-122, -140),
 	Vector2(-108, -214), Vector2(-74, -268), Vector2(-26, -296),
 	Vector2(26, -296), Vector2(74, -268), Vector2(108, -214),
 	Vector2(122, -140), Vector2(116, -60), Vector2(96, 4),
-])
-const BELLY := PackedVector2Array([
+]
+const BELLY: Array[Vector2] = [
 	Vector2(-62, -26), Vector2(-72, -96), Vector2(-56, -150),
 	Vector2(0, -166), Vector2(56, -150), Vector2(72, -96),
 	Vector2(62, -26), Vector2(40, 2), Vector2(-40, 2),
-])
-const FOOT := PackedVector2Array([
+]
+const FOOT: Array[Vector2] = [
 	Vector2(-46, -6), Vector2(46, -6), Vector2(54, 18),
 	Vector2(40, 32), Vector2(-44, 32), Vector2(-58, 18),
-])
-const CLAW_TOOTH := PackedVector2Array([
+]
+const CLAW_TOOTH: Array[Vector2] = [
 	Vector2(-6, 20), Vector2(6, 20), Vector2(0, 32),
-])
-const ARM := PackedVector2Array([
+]
+const ARM: Array[Vector2] = [
 	Vector2(0, 0), Vector2(30, 6), Vector2(44, 62),
 	Vector2(38, 108), Vector2(10, 116), Vector2(-8, 96), Vector2(-10, 40),
-])
-const HORN := PackedVector2Array([
+]
+const HORN: Array[Vector2] = [
 	Vector2(-22, 0), Vector2(-6, -76), Vector2(18, -4),
-])
-const TAIL := PackedVector2Array([
+]
+const TAIL: Array[Vector2] = [
 	Vector2(0, 0), Vector2(-22, 18), Vector2(-52, 26),
 	Vector2(-76, 12), Vector2(-70, -6), Vector2(-46, 4), Vector2(-18, -12),
-])
+]
 ## Authored around its own origin, because _update_mouth scales it open.
-const MOUTH := PackedVector2Array([
+const MOUTH: Array[Vector2] = [
 	Vector2(-56, -29), Vector2(56, -29), Vector2(44, 15),
 	Vector2(0, 29), Vector2(-44, 15),
-])
-const TOOTH_SHAPE := PackedVector2Array([
+]
+const TOOTH_SHAPE: Array[Vector2] = [
 	Vector2(-9, 0), Vector2(9, 0), Vector2(0, 20),
-])
-const BROW := PackedVector2Array([
+]
+const BROW: Array[Vector2] = [
 	Vector2(-30, 0), Vector2(28, -14), Vector2(30, 2), Vector2(-28, 14),
-])
+]
 
 ## Placement of the mirrored parts. Left copies use scale.x = -1.
 const FOOT_OFFSET := Vector2(52.0, 4.0)
@@ -239,11 +239,11 @@ func _build() -> void:
 
 		# The lid is a full-height shutter scaled from 0 to 1 on the blink,
 		# the same trick the in-game Monster uses.
-		var lid := _polygon(PackedVector2Array([
+		var lid := _polygon([
 			Vector2(-EYE_RADIUS - LID_MARGIN, 0.0),
 			Vector2(EYE_RADIUS + LID_MARGIN, 0.0),
 			Vector2(EYE_RADIUS + LID_MARGIN, EYE_RADIUS * LID_HEIGHT_FACTOR),
-			Vector2(-EYE_RADIUS - LID_MARGIN, EYE_RADIUS * LID_HEIGHT_FACTOR)]),
+			Vector2(-EYE_RADIUS - LID_MARGIN, EYE_RADIUS * LID_HEIGHT_FACTOR)],
 			SKIN_DARK)
 		lid.position = eye.position - Vector2(0.0, EYE_RADIUS)
 		lid.scale = Vector2(1.0, 0.0)
@@ -256,15 +256,19 @@ func _build() -> void:
 		_root.add_child(brow)
 
 
-func _polygon(points: PackedVector2Array, color: Color) -> Polygon2D:
+## Takes a plain Array of Vector2 rather than a PackedVector2Array, because
+## the shapes above are consts and `PackedVector2Array([...])` is a
+## constructor call — not a constant expression, and not something a const can
+## hold. The conversion happens here, once, at the point of use.
+func _polygon(points: Array, color: Color) -> Polygon2D:
 	var poly := Polygon2D.new()
-	poly.polygon = points
+	poly.polygon = PackedVector2Array(points)
 	poly.color = color
 	return poly
 
 
-func _ellipse(rx: float, ry: float, segments: int) -> PackedVector2Array:
-	var points := PackedVector2Array()
+func _ellipse(rx: float, ry: float, segments: int) -> Array[Vector2]:
+	var points: Array[Vector2] = []
 	for i in segments:
 		var angle := TAU * float(i) / float(segments)
 		points.append(Vector2(cos(angle) * rx, sin(angle) * ry))

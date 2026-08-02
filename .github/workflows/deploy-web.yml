@@ -53,6 +53,7 @@ jobs:
           python3 tools/check_economy.py
           python3 tools/check_text_fit.py
           python3 tools/check_title.py
+          python3 tools/check_bosses.py
 
   build:
     needs: checks

@@ -101,6 +101,27 @@ extends CharacterBody2D
 @export var impact_burn_damage: int = 5
 @export var impact_burn_ticks: int = 4
 
+# --- Risk Pool (absorbed from the Actuary, §12) ---
+## The boss's own attack, turned around: a column of liabilities dropped on
+## what you are aiming at. Three of them, spread, falling under gravity — so
+## it answers a crowd on the ground the way Flame Draft answers one thing in
+## a line.
+@export var risk_pool_shots: int = 3
+@export var risk_pool_spread: float = 82.0
+@export var risk_pool_height: float = 260.0
+@export var risk_pool_range: float = 420.0
+@export var risk_pool_damage: int = 22
+
+# --- Undertow (absorbed from the High-Water Mark, §12) ---
+## Drags every peril in range toward you and hurts it on the way in. The pull
+## is the point: it feeds Munch, which is the game's main healing verb, so the
+## ability converts crowd control into Coverage rather than into damage.
+@export var undertow_damage: int = 18
+@export var undertow_pull: float = 150.0
+## How close the pull is allowed to bring a peril. Inside this it would be
+## standing on top of the player, which reads as a bug rather than a vacuum.
+@export var undertow_min_distance: float = 34.0
+
 @onready var sprite: Node2D = $Sprite
 @onready var muzzle: Marker2D = $Muzzle
 @onready var projectile_pool: Node = $ProjectilePool
@@ -534,6 +555,10 @@ func _process_ability() -> void:
 	match GameManager.current_ability():
 		Abilities.IMPACT_DASH:
 			_start_impact_dash()
+		Abilities.RISK_POOL:
+			_fire_risk_pool()
+		Abilities.UNDERTOW:
+			_fire_undertow()
 		_:
 			_fire_flame_draft()
 
@@ -546,6 +571,49 @@ func _fire_flame_draft() -> void:
 	Sfx.play("flame_draft")
 	Juice.shake(5.0, 0.2)
 	_squash = Vector2(1.2, 0.85)
+
+
+## Risk Pool: liabilities spawned above where you are aiming and driven
+## straight down (the pooled projectile travels at a constant speed along its
+## direction — there is no gravity on it). Aim is the placement control: the
+## column lands where the assist was already pointing, which is what makes
+## this the answer to a crowd on the ground rather than one thing in a line.
+func _fire_risk_pool() -> void:
+	var target := global_position + aim_direction() * risk_pool_range
+	var damage := maxi(int(round(float(risk_pool_damage)
+			* GameManager.factor("damage_mult"))), 1)
+	for i in risk_pool_shots:
+		var offset := (float(i) - float(risk_pool_shots - 1) * 0.5) * risk_pool_spread
+		var orb: Node2D = flame_pool.acquire()
+		orb.launch(Vector2(target.x + offset, target.y - risk_pool_height),
+				Vector2.DOWN, damage, false)
+	Sfx.play("charged_shot", 0.1, 0.9)
+	Juice.shake(4.0, 0.2)
+	_squash = Vector2(0.86, 1.2)
+
+
+## Undertow: a vacuum. Everything in Pound range is hurt and dragged in, which
+## is what sets up a Munch — the pull is worth more than the damage.
+func _fire_undertow() -> void:
+	var damage := maxi(int(round(float(undertow_damage)
+			* GameManager.factor("damage_mult"))), 1)
+	var burning := not GameManager.active_combo().is_empty()
+	for body in pound_area.get_overlapping_bodies():
+		if not body.has_method("take_damage"):
+			continue
+		body.take_damage(damage)
+		var to_player := global_position - body.global_position
+		var distance := to_player.length()
+		if distance > undertow_min_distance:
+			body.global_position += to_player.normalized() * minf(
+					undertow_pull, distance - undertow_min_distance)
+		# STEAM CLAIM (§14): with Flame Draft held, what arrives is alight.
+		if burning and body.has_method("apply_burn"):
+			body.apply_burn(impact_burn_damage, impact_burn_ticks)
+	Sfx.play("pound_impact", 0.1, 0.85)
+	Juice.shockwave(global_position)
+	Juice.shake(6.0, 0.3)
+	_squash = Vector2(0.72, 1.34)
 
 
 ## Impact Dash: an armoured charge that damages everything it passes through.

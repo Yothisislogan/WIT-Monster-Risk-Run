@@ -92,16 +92,16 @@ def rect2(source: str, name: str) -> tuple[float, float, float, float]:
 
 def polygon(source: str, name: str) -> list[tuple[float, float]]:
     found = re.search(
-        rf"^const {name} :?= PackedVector2Array\(\[(.*?)\]\)",
+        rf"^const {name}: Array\[Vector2\] = \[(.*?)\n\]",
         source, re.MULTILINE | re.DOTALL)
     if found is None:
-        raise SystemExit(f"no const {name} := PackedVector2Array([...]) found")
+        raise SystemExit(f"no const {name}: Array[Vector2] = [...] found")
     return [(float(x), float(y)) for x, y
             in re.findall(r"Vector2\(([-\d.]+), *([-\d.]+)\)", found.group(1))]
 
 
 def polygon_names(source: str) -> set[str]:
-    return set(re.findall(r"^const (\w+) :?= PackedVector2Array\(",
+    return set(re.findall(r"^const (\w+): Array\[Vector2\] = \[",
                           source, re.MULTILINE))
 
 
