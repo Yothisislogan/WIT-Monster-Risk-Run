@@ -35,6 +35,12 @@ const ROOMS := {
 		"music": "liability_land",
 			"backdrop": Color(0.38, 0.18, 0.36),
 	},
+	"boss_actuary": {
+		"name": "THE ACTUARY",
+		"subtitle": "It has run the numbers",
+		"music": "boss_theme",
+			"backdrop": Color(0.14, 0.18, 0.38),
+	},
 	"boss_inferno_adjuster": {
 		"name": "THE INFERNO ADJUSTER",
 		"subtitle": "Your claim is being denied",
@@ -54,9 +60,12 @@ const COMBAT_ROOMS: Array[String] = [
 	"res://scenes/rooms/test_room_e.tscn",
 ]
 
-## One per act. Falls back to the last entry while later bosses are unbuilt,
-## so adding a boss scene is a one-line change here.
+## Bosses in act order, cycled. With three acts and two bosses a run does see
+## one of them twice — but cycling rather than clamping means never twice in a
+## row, and the Risk Meter has moved a long way by the third act. Adding a
+## third boss is one line here and the repeat disappears.
 const BOSS_ROOMS: Array[String] = [
+	"res://scenes/rooms/boss_actuary.tscn",
 	"res://scenes/rooms/boss_inferno_adjuster.tscn",
 ]
 
@@ -71,7 +80,7 @@ const FALLBACK := {
 static func boss_room_for(act: int) -> String:
 	if BOSS_ROOMS.is_empty():
 		return ""
-	return BOSS_ROOMS[mini(act, BOSS_ROOMS.size() - 1)]
+	return BOSS_ROOMS[act % BOSS_ROOMS.size()]
 
 
 static func key_for(scene_path: String) -> String:

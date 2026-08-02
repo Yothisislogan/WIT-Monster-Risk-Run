@@ -16,6 +16,8 @@ Checks, per scene:
   * sub_resources are declared before they are referenced by another
   * every ext_resource path exists on disk
   * every node's parent= path was declared earlier in the file
+  * every [connection] names nodes the scene declares and a method the
+    receiving script actually defines
   * uid= values are unique across all scenes
 
 And, per script attached to a node in a scene:
@@ -68,6 +70,7 @@ class Scene:
         self.sub: list[str] = []
         # node path -> {"name", "parent", "unique", "script_id"}
         self.nodes: dict[str, dict[str, str | bool]] = {}
+        self.connections: list[dict] = []
         self._parse()
 
     def _line_of(self, index: int) -> int:
@@ -100,6 +103,11 @@ class Scene:
                 self.sub.append(attrs.get("id", ""))
             elif kind == "node":
                 self._record_node(attrs, body, line)
+            elif kind == "connection":
+                self.connections.append({
+                    "signal": attrs.get("signal", ""), "from": attrs.get("from", "."),
+                    "to": attrs.get("to", "."), "method": attrs.get("method", ""),
+                    "line": line})
 
     def _check_sub_body(self, body: str, line: int) -> None:
         """A sub_resource may only reference sub_resources declared above it."""
@@ -167,6 +175,81 @@ class Scene:
         return target in self.nodes
 
 
+def defines(scripts: dict[str, str], path: str, method: str, seen: set[str] | None = None) -> bool:
+    """Does this script, or anything it extends, define `method`?"""
+    seen = seen or set()
+    if path in seen or path not in scripts:
+        return False
+    seen.add(path)
+    source = scripts[path]
+    if re.search(rf"^func {re.escape(method)}\s*\(", source, re.MULTILINE):
+        return True
+    base = re.search(r'^extends\s+"?(res://[^"]+|\w+)"?', source, re.MULTILINE)
+    if base is None:
+        return False
+    target = base.group(1)
+    if not target.startswith("res://"):
+        for candidate, text in scripts.items():
+            if re.search(rf"^class_name\s+{re.escape(target)}\b", text, re.MULTILINE):
+                target = candidate
+                break
+        else:
+            return False        # the chain ran into a Godot built-in
+    return defines(scripts, target, method, seen)
+
+
+def chain_ends_in_engine(scripts: dict[str, str], path: str) -> bool:
+    """True when the extends chain leaves our code, so a method we did not
+    find could still be inherited from Godot."""
+    seen: set[str] = set()
+    while path in scripts and path not in seen:
+        seen.add(path)
+        base = re.search(r'^extends\s+"?(res://[^"]+|\w+)"?', scripts[path], re.MULTILINE)
+        if base is None:
+            return True
+        target = base.group(1)
+        if target.startswith("res://"):
+            path = target
+            continue
+        for candidate, text in scripts.items():
+            if re.search(rf"^class_name\s+{re.escape(target)}\b", text, re.MULTILINE):
+                path = candidate
+                break
+        else:
+            return True
+    return True
+
+
+def check_connections(scene: Scene, scripts: dict[str, str]) -> None:
+    """A [connection] naming a method the receiver does not have is an error
+    the moment the scene loads, and these are written entirely by hand."""
+    for connection in scene.connections:
+        target = connection["to"]
+        node = scene.nodes.get(target if target != "." else ".")
+        if node is None:
+            scene.problems.append(
+                f"{scene.rel}:{connection['line']}: connection targets node "
+                f"'{target}', which this scene does not declare")
+            continue
+        if connection["from"] not in scene.nodes:
+            scene.problems.append(
+                f"{scene.rel}:{connection['line']}: connection comes from node "
+                f"'{connection['from']}', which this scene does not declare")
+        script_id = str(node["script_id"])
+        if not script_id or script_id not in scene.ext:
+            continue            # the receiver's script comes from an instance
+        script_path = scene.ext[script_id]["path"]
+        method = connection["method"]
+        if defines(scripts, script_path, method):
+            continue
+        # Only report when the whole chain is ours; otherwise the method could
+        # be an engine one and we cannot tell.
+        if method.startswith("_on_") or not chain_ends_in_engine(scripts, script_path):
+            scene.problems.append(
+                f"{scene.rel}:{connection['line']}: connection calls "
+                f"{method}() on '{target}', which {script_path} does not define")
+
+
 def check_script_paths(scene: Scene, scripts: dict[str, str]) -> None:
     """Check $Path and %Unique usage in every script attached to this scene."""
     uniques = scene.unique_names()
@@ -205,6 +288,7 @@ def main() -> int:
     seen_uid: dict[str, str] = {}
     for scene in scenes:
         scene.check()
+        check_connections(scene, scripts)
         check_script_paths(scene, scripts)
         problems.extend(scene.problems)
         if scene.uid:
