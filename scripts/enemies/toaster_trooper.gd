@@ -19,7 +19,7 @@ func _physics_process(delta: float) -> void:
 		if is_on_wall() or not edge_probe.is_colliding():
 			direction *= -1
 			edge_probe.position.x = absf(edge_probe.position.x) * direction
-		velocity.x = direction * walk_speed
+		velocity.x = direction * walk_speed * speed_factor
 	visual.scale.x = absf(visual.scale.x) * -direction
 	move_and_slide()
 

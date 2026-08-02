@@ -48,7 +48,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _drift(delta: float) -> void:
-	velocity.x = _direction * drift_speed
+	velocity.x = _direction * drift_speed * speed_factor
 	velocity.y = cos(_age * bob_speed) * bob_amplitude
 	if is_on_wall():
 		_direction *= -1
@@ -72,7 +72,7 @@ func _telegraph(delta: float) -> void:
 
 
 func _dive(delta: float) -> void:
-	velocity = _dive_vector * dive_speed
+	velocity = _dive_vector * dive_speed * speed_factor
 	_timer -= delta
 	if _timer <= 0.0 or is_on_floor() or is_on_wall():
 		if is_on_floor():

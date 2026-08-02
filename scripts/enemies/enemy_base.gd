@@ -16,7 +16,21 @@ extends CharacterBody2D
 ## Bosses and scripted enemies opt out of the off-screen processing pause.
 @export var always_active: bool = false
 
+## Elites (§11). Kept as constants because tools/check_economy.py reads them
+## out of this file to model how much extra damage a high-Risk room deals; a
+## literal buried in _maybe_promote_to_elite is a number the model can only
+## guess at.
+const ELITE_THRESHOLD := 0.35
+const ELITE_CHANCE_SLOPE := 0.55
+const ELITE_HEALTH_MULT := 1.8
+const ELITE_DAMAGE_MULT := 1.35
+const ELITE_REWARD_MULT := 2.0
+
 var health: int
+## Movement multiplier from Risk and act depth, resolved once at spawn so a
+## peril does not change pace mid-fight when the meter moves. Subclasses
+## multiply their own speeds by it.
+var speed_factor: float = 1.0
 var weakened: bool = false
 var burn_ticks: int = 0
 var burn_damage: int = 0
@@ -32,8 +46,13 @@ var is_elite: bool = false
 
 func _ready() -> void:
 	add_to_group("enemies")
-	# Perils scale with the Risk Meter (§11), applied once at spawn.
+	# Perils scale with the Risk Meter and with act depth (§11, §16), applied
+	# once at spawn. Damage scales too — for a long time only health did, while
+	# the balance model assumed both, so the model was describing a softer game.
 	max_health = maxi(int(round(float(max_health) * GameManager.enemy_health_factor())), 1)
+	contact_damage = maxi(
+		int(round(float(contact_damage) * GameManager.enemy_damage_factor())), 1)
+	speed_factor = GameManager.enemy_speed_factor()
 	_maybe_promote_to_elite()
 	health = max_health
 	hitbox.body_entered.connect(_on_hitbox_body_entered)
@@ -54,15 +73,15 @@ func _ready() -> void:
 ## At high Risk a share of perils arrive as elites: visibly larger, tougher,
 ## and worth more. This is the Risk Meter you can actually see (§11).
 func _maybe_promote_to_elite() -> void:
-	if always_active or GameManager.risk < 0.35:
+	if always_active or GameManager.risk < ELITE_THRESHOLD:
 		return
-	var chance := (GameManager.risk - 0.35) * 0.55
+	var chance := (GameManager.risk - ELITE_THRESHOLD) * ELITE_CHANCE_SLOPE
 	if randf() > chance:
 		return
 	is_elite = true
-	max_health = int(round(float(max_health) * 1.8))
-	contact_damage = int(round(float(contact_damage) * 1.35))
-	currency_reward = int(round(float(currency_reward) * 2.0))
+	max_health = int(round(float(max_health) * ELITE_HEALTH_MULT))
+	contact_damage = int(round(float(contact_damage) * ELITE_DAMAGE_MULT))
+	currency_reward = int(round(float(currency_reward) * ELITE_REWARD_MULT))
 	premium_drops += 2
 	defeat_source = "outmatched by an elite peril"
 	scale = Vector2(1.28, 1.28)

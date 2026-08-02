@@ -28,6 +28,22 @@ const RISK_RELIEF_PER_BOSS := 0.09
 ## pressure rises is not a valve.
 const RISK_DAMPING := 0.4
 
+## How far Risk and depth push the perils. These are constants rather than
+## literals inside the factor functions below because tools/check_economy.py
+## reads them out of this file: the whole survivability model is built on
+## them, and a number that lives in only one of the two places is how the
+## damping curve came to exist in the model and not in the game.
+const ENEMY_HEALTH_PER_RISK := 0.6
+const ENEMY_SPEED_PER_RISK := 0.35
+const ENEMY_DAMAGE_PER_RISK := 0.1
+## Per act cleared. Three acts, so the last one lands at +20% health and +12%
+## damage before Risk is counted at all. These look small and are not: act
+## scaling bites hardest on the players who get furthest, which is exactly the
+## group the balance model had finishing every run.
+const ACT_HEALTH_STEP := 0.1
+const ACT_SPEED_STEP := 0.05
+const ACT_DAMAGE_STEP := 0.06
+
 ## Chaining takedowns builds an "Adjuster's Streak": more Premiums per kill,
 ## and it drops the moment you take a hit. Reckless play pays (§11).
 const COMBO_WINDOW := 3.0
@@ -255,13 +271,29 @@ func set_risk(value: float) -> void:
 	Events.risk_changed.emit(risk)
 
 
-## Perils get tougher as Risk climbs — that is what the reward pays for.
+## Perils get tougher as Risk climbs — that is what the reward pays for (§11) —
+## and tougher again with every act survived (§16).
+##
+## Risk alone was not enough. The balance model had a careful player on the
+## Standard deductible finishing 100% of runs, and the reason is visible in
+## the old one-line version of this function: the third act at 20 Risk was
+## exactly as dangerous as the first act at 20 Risk. Nothing about being deep
+## in a run made anything harder. The act steps are what make the back half of
+## a run feel like the back half.
 func enemy_health_factor() -> float:
-	return 1.0 + risk * 0.6
+	return (1.0 + risk * ENEMY_HEALTH_PER_RISK) * (1.0 + ACT_HEALTH_STEP * current_act())
 
 
 func enemy_speed_factor() -> float:
-	return 1.0 + risk * 0.35
+	return (1.0 + risk * ENEMY_SPEED_PER_RISK) * (1.0 + ACT_SPEED_STEP * current_act())
+
+
+## Contact damage was the third thing tools/check_economy.py modelled and the
+## game never did: the model has always scaled peril damage with Risk, and
+## enemy_base.gd only ever scaled health. Every survivability number in the
+## model was therefore measured against a gentler game than the one that runs.
+func enemy_damage_factor() -> float:
+	return (1.0 + risk * ENEMY_DAMAGE_PER_RISK) * (1.0 + ACT_DAMAGE_STEP * current_act())
 
 
 func premium_factor() -> float:
@@ -362,6 +394,13 @@ func current_node() -> Dictionary:
 
 func current_kind() -> int:
 	return map.kind_of(map.current_id) if map != null else int(ClaimMap.Kind.PERIL)
+
+
+## How deep the run is, 0-based. The peril scaling above reads this on every
+## spawn, so it has to answer before a map exists — the title screen and a
+## fresh boot both ask.
+func current_act() -> int:
+	return map.current_act() if map != null else 0
 
 
 func current_room_path() -> String:

@@ -1,8 +1,9 @@
-[gd_scene load_steps=13 format=3 uid="uid://witroomd00001"]
+[gd_scene load_steps=14 format=3 uid="uid://witroomd00001"]
 
 [ext_resource type="Script" path="res://scripts/rooms/room.gd" id="1_room"]
 [ext_resource type="PackedScene" path="res://scenes/enemies/lawsuit_launcher.tscn" id="2_launcher"]
 [ext_resource type="PackedScene" path="res://scenes/enemies/ember_imp.tscn" id="3_imp"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/toaster_trooper.tscn" id="8_trooper"]
 [ext_resource type="PackedScene" path="res://scenes/hazards/collapsing_platform.tscn" id="4_collapse"]
 [ext_resource type="PackedScene" path="res://scenes/rooms/premium.tscn" id="5_premium"]
 [ext_resource type="PackedScene" path="res://scenes/rooms/crate.tscn" id="6_crate"]
@@ -125,6 +126,9 @@ position = Vector2(700, 260)
 
 [node name="Imp2" parent="Enemies" instance=ExtResource("3_imp")]
 position = Vector2(1250, 400)
+
+[node name="Trooper1" parent="Enemies" instance=ExtResource("8_trooper")]
+position = Vector2(1150, 560)
 
 [node name="Props" type="Node2D" parent="."]
 

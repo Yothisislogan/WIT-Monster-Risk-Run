@@ -23,13 +23,30 @@ from pathlib import Path
 # "keep them in sync by hand" note this file used to carry is exactly how the
 # Risk damping curve ended up existing only in the model, and the Exclusion
 # cost ended up 15 points in the game and 18 here.
-_GM = (Path(__file__).resolve().parent.parent
-       / "scripts" / "autoload" / "game_manager.gd").read_text(encoding="utf-8")
+_ROOT = Path(__file__).resolve().parent.parent
+_GM = (_ROOT / "scripts" / "autoload" / "game_manager.gd").read_text(encoding="utf-8")
+_ENEMY = (_ROOT / "scripts" / "enemies" / "enemy_base.gd").read_text(encoding="utf-8")
 
 
-def _gm_const(name, fallback):
-    found = re.search(rf"^const {name} := (-?[\d.]+)", _GM, re.MULTILINE)
-    return float(found.group(1)) if found else fallback
+def _const(source, name, _unused=None):
+    """Read a numeric `const` out of GDScript. Missing is fatal, not a default.
+
+    This used to fall back to a literal when the regex missed. That makes the
+    binding worthless in the one case it exists for: rename or delete the
+    constant in the game and the model keeps running on the stale number, green
+    the whole way, which is the same failure as a checker that reads its bounds
+    from the source it is checking."""
+    found = re.search(rf"^const {name} := (-?[\d.]+)", source, re.MULTILINE)
+    if found is None:
+        raise SystemExit(
+            f"check_economy.py reads `const {name}` out of the GDScript and it "
+            f"is no longer there. The model is built on it — update this file "
+            f"rather than letting it run on a stale copy of the number.")
+    return float(found.group(1))
+
+
+def _gm_const(name, _unused=None):
+    return _const(_GM, name)
 
 # --- Risk Meter (§11) -------------------------------------------------------
 # Risk is stored 0..1; the design and the HUD talk in "Risk points" = risk*100.
@@ -66,9 +83,19 @@ RISK_SINKS = {
 # Danger grows slowly and reward grows fast: the whole point of the meter is
 # that taking risk must be *tempting* (§2 "tempted to take unnecessary risks"),
 # so the reward slopes deliberately out-run the danger slopes.
-ENEMY_HEALTH_PER_RISK = 0.35   # x(1 + r*this)
-ENEMY_SPEED_PER_RISK = 0.25
-ENEMY_DAMAGE_PER_RISK = 0.20
+# These three were hand-copied and all three were wrong. The game scaled health
+# by 0.6, not 0.35; it scaled contact damage by nothing at all while this file
+# assumed 0.20; and enemy_speed_factor() was never called by anything. So the
+# model was describing a game that did not exist in either direction at once.
+# They are read out of the GDScript now.
+ENEMY_HEALTH_PER_RISK = _gm_const("ENEMY_HEALTH_PER_RISK", 0.6)
+ENEMY_SPEED_PER_RISK = _gm_const("ENEMY_SPEED_PER_RISK", 0.35)
+ENEMY_DAMAGE_PER_RISK = _gm_const("ENEMY_DAMAGE_PER_RISK", 0.22)
+# Depth is the other half of the difficulty curve: perils scale per act
+# cleared, independently of Risk.
+ACT_HEALTH_STEP = _gm_const("ACT_HEALTH_STEP", 0.18)
+ACT_SPEED_STEP = _gm_const("ACT_SPEED_STEP", 0.08)
+ACT_DAMAGE_STEP = _gm_const("ACT_DAMAGE_STEP", 0.12)
 PREMIUM_PER_RISK = 0.75
 SHOP_PRICE_PER_RISK = 0.25     # income (0.75) outruns prices (0.25) on purpose
 LIFETIME_PER_RISK = 1.00
@@ -78,8 +105,17 @@ HEAL_SPAWN_PER_RISK = -0.35    # fewer medkits on the floor as risk climbs
 # player's hits-taken grows sublinearly with fight length, hence the exponent.
 EXPOSURE_EXPONENT = 0.5
 
-ELITE_THRESHOLD = 0.25         # elites start at ELEVATED
-ELITE_CHANCE_SLOPE = 0.40      # chance = (risk - 0.25) * 0.40  -> 30% at max
+# How many perils the hits-per-room profiles below were authored against. Until
+# now the model could not see room contents at all: `hits` came only from the
+# skill profile, so adding a peril to a room changed the payout and nothing
+# else, and "make the levels harder by putting more in them" was a change this
+# model would have scored as pure profit. Room population is compared against
+# this baseline and folded into exposure on the same sublinear curve.
+PROFILE_BASELINE_ENEMIES = 4.0
+
+ELITE_THRESHOLD = _const(_ENEMY, "ELITE_THRESHOLD", 0.3)
+ELITE_CHANCE_SLOPE = _const(_ENEMY, "ELITE_CHANCE_SLOPE", 0.5)
+ELITE_DAMAGE_MULT = _const(_ENEMY, "ELITE_DAMAGE_MULT", 1.35)
 
 # --- Deductibles (§8) -------------------------------------------------------
 # High Deductible's fragility comes from the small Coverage pool, NOT from
@@ -133,11 +169,31 @@ CLEAR_MULT = {"combat": 1.25, "traversal": 1.0, "hazard": 1.40,
               "miniboss": 1.0, "boss": 1.0, "shop": 0.0, "claim": 0.0,
               "rest": 0.0}
 
-# Authored room contents, measured from scenes/rooms/test_room_*.tscn.
+def _authored_enemies():
+    """Mean enemies actually placed in the combat room scenes.
+
+    This used to be the literal 4, under a comment claiming it was "measured
+    from scenes/rooms/test_room_*.tscn". It was not: the rooms held 3, 3, 3, 2
+    and 2. Every payout and exposure number in this model was computed against
+    a third more perils than the game spawns, so read it instead."""
+    counts = []
+    for room in sorted((_ROOT / "scenes" / "rooms").glob("test_room_*.tscn")):
+        text = room.read_text(encoding="utf-8")
+        counts.append(sum(text.count(f'instance=ExtResource("{rid}")')
+                          for rid in re.findall(
+                              r'\[ext_resource type="PackedScene" path="res://scenes/'
+                              r'enemies/[a-z_]+\.tscn" id="([^"]+)"\]', text)))
+    return statistics.fmean(counts) if counts else 0.0
+
+
+AUTHORED_ENEMIES = _authored_enemies()
+
+# Authored room contents. Enemy counts come from the scenes themselves; the
+# other fields are still authored here.
 ROOM_CONTENT = {           # coins placed, crates(x3 coins), enemies, drops/enemy
-    "combat":    dict(coins=8, crates=3, enemies=4, drops=2.25),
+    "combat":    dict(coins=8, crates=3, enemies=AUTHORED_ENEMIES, drops=2.25),
     "traversal": dict(coins=12, crates=3, enemies=1, drops=2.0),
-    "hazard":    dict(coins=8, crates=2, enemies=3, drops=2.25),
+    "hazard":    dict(coins=8, crates=2, enemies=AUTHORED_ENEMIES * 0.75, drops=2.25),
     "miniboss":  dict(coins=4, crates=1, enemies=1, drops=6.0),
     "boss":      dict(coins=0, crates=0, enemies=1, drops=8.0),
     "shop":      dict(coins=0, crates=0, enemies=0, drops=0.0),
@@ -162,6 +218,10 @@ RUN_SEQUENCE = [
     # act three
     "combat", "combat", "shop", "hazard", "rest", "boss",
 ]
+# Six sites per act, so `index // ACT_LENGTH` is which act a site is in — the
+# same number GameManager.current_act() hands to the peril scaling.
+ACT_LENGTH = len(RUN_SEQUENCE) // 3
+
 # Cards are the reward for fighting, so only combat sites draw them.
 DRAFT_AFTER = {i for i, kind in enumerate(RUN_SEQUENCE)
                if kind in ("combat", "hazard", "miniboss", "boss")}
@@ -316,7 +376,15 @@ def simulate_run(ded, profile, rng):
 
         if kind == "boss":
             cov = max(cov, max_cov * BOSS_ENTRY_TOPUP)
-            coverage_at_boss = cov / max_cov
+            # The FIRST boss, not the last one reached. This used to overwrite
+            # on every boss, which made "boss-door Coverage" mean a different
+            # door per build: a run that dies in act one was being scored at
+            # the act-one door and compared against a run scored at act three.
+            # Once the acts stopped being equally dangerous that comparison
+            # inverted, and the assertion below started failing on a metric
+            # that was measuring run length rather than health.
+            if coverage_at_boss is None:
+                coverage_at_boss = cov / max_cov
         if kind == "hazard":
             add_risk(RISK_SOURCES["hazard_room_entry"])
         if kind == "miniboss":
@@ -324,12 +392,23 @@ def simulate_run(ded, profile, rng):
 
         # --- damage taken -------------------------------------------------
         elite_chance = max(0.0, (risk - ELITE_THRESHOLD) * ELITE_CHANCE_SLOPE)
+        act = index // ACT_LENGTH
         hit_damage = (BASE_CONTACT_DAMAGE * d["enemy_damage"]
                       * (1.0 + ENEMY_DAMAGE_PER_RISK * risk)
-                      * (1.0 + 0.35 * elite_chance)
+                      * (1.0 + ACT_DAMAGE_STEP * act)
+                      * (1.0 + (ELITE_DAMAGE_MULT - 1.0) * elite_chance)
                       * d["damage_taken"])
-        exposure = (d["enemy_health"] * (1.0 + ENEMY_HEALTH_PER_RISK * risk)) ** EXPOSURE_EXPONENT
-        hits = max(0.0, rng.gauss(p["hits"], 0.45)) * exposure
+        exposure = (d["enemy_health"]
+                    * (1.0 + ENEMY_HEALTH_PER_RISK * risk)
+                    * (1.0 + ACT_HEALTH_STEP * act)) ** EXPOSURE_EXPONENT
+        # Only rooms whose danger is a crowd. A boss is one enemy and a long
+        # fight; its danger is boss_mult below, and running it through a
+        # population term would score it as half a room.
+        population = 1.0
+        if kind not in ("boss", "miniboss"):
+            population = (max(content["enemies"], 1.0)
+                          / PROFILE_BASELINE_ENEMIES) ** EXPOSURE_EXPONENT
+        hits = max(0.0, rng.gauss(p["hits"], 0.45)) * exposure * population
         boss_mult = 3.0 if kind == "boss" else (1.8 if kind == "miniboss" else 1.0)
         cov -= hits * hit_damage * boss_mult
         env_hits = max(0.0, rng.gauss(p["env"], 0.35)) * (1.6 if kind == "hazard" else 1.0)

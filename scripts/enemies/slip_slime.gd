@@ -41,7 +41,7 @@ func _hop() -> void:
 	_timer = hop_interval
 	if is_instance_valid(_player):
 		_facing = 1 if _player.global_position.x > global_position.x else -1
-	velocity = Vector2(hop_velocity.x * _facing, hop_velocity.y)
+	velocity = Vector2(hop_velocity.x * _facing * speed_factor, hop_velocity.y)
 	Sfx.play("bounce", 0.2, 0.45)
 	Juice.dust(global_position + Vector2(0.0, 18.0), 5)
 

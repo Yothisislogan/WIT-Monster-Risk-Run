@@ -175,6 +175,9 @@ position = Vector2(1000, 300)
 [node name="Launcher1" parent="Enemies" instance=ExtResource("9_launcher")]
 position = Vector2(1240, 300)
 
+[node name="Imp2" parent="Enemies" instance=ExtResource("8_imp")]
+position = Vector2(640, 300)
+
 [node name="Hazards" type="Node2D" parent="."]
 
 [node name="Vent1" parent="Hazards" instance=ExtResource("3_vent")]

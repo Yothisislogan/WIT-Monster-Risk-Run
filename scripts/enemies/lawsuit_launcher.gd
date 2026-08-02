@@ -55,7 +55,10 @@ func _physics_process(delta: float) -> void:
 
 
 func _fire(to_player: Vector2) -> void:
-	_cooldown = reload_time
+	# The launcher escalates by firing more often, not by firing faster. The
+	# lob arc is a design property — "you can walk under it or dash through the
+	# gap" — and speeding the projectile up would quietly delete that.
+	_cooldown = reload_time / speed_factor
 	if projectile_scene == null:
 		return
 	var direction := to_player.normalized()
