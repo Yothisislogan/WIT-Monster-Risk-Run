@@ -65,8 +65,7 @@ func _load_room(path: String) -> void:
 	room_container.add_child(current_room)
 	current_room.exit_reached.connect(_on_room_exit_reached)
 	player.global_position = current_room.spawn_point.global_position
-	player.velocity = Vector2.ZERO
-	player.set_physics_process(true)
+	player.reset_for_room()
 	player.apply_camera_bounds(current_room.camera_bounds)
 	_safe_position = current_room.spawn_point.global_position
 	_safe_timer = 0.0
@@ -98,9 +97,12 @@ func _on_card_chosen(card_id: String) -> void:
 		_load_room(GameManager.current_room_path())
 
 
-func _on_run_ended(_report: Dictionary) -> void:
-	# Freeze gameplay under the claim report overlay.
-	player.set_physics_process(false)
+func _on_run_ended(report: Dictionary) -> void:
+	# A win freezes the frame under the claim report. A loss does not: the
+	# Monster's death fall is the last thing you watch, and player.gd drives
+	# it from its own _dead state until the HUD fades the screen out.
+	if bool(report.get("victory", false)):
+		player.set_physics_process(false)
 
 
 func _on_restart_requested() -> void:

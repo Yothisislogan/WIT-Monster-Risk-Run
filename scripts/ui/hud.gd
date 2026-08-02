@@ -7,6 +7,10 @@ signal restart_requested
 
 const PATCH_COST := 40
 const PATCH_HEAL := 45
+## Losses fade through dried blood rather than black, so a death reads
+## differently from a room transition even before the report appears.
+const DEFEAT_FADE := Color(0.22, 0.02, 0.05, 0.0)
+const ROOM_FADE := Color(0.0, 0.0, 0.0, 1.0)
 
 @onready var coverage_bar: ProgressBar = %CoverageBar
 @onready var coverage_label: Label = %CoverageLabel
@@ -267,8 +271,9 @@ func _on_ability_granted(ability_id: String) -> void:
 
 ## Room-entry banner: names the Risk Zone, then gets out of the way fast.
 func _on_room_started(path: String) -> void:
-	# Fade up from black so a room swap reads as a cut, not a pop.
-	fade.color.a = 1.0
+	# Fade up from black so a room swap reads as a cut, not a pop. The whole
+	# colour is reset, not just alpha — a previous defeat left it red.
+	fade.color = ROOM_FADE
 	var fade_tween := create_tween()
 	fade_tween.tween_property(fade, "color:a", 0.0, 0.35)
 	boss_box.visible = false
@@ -398,10 +403,29 @@ func _on_card_picked(card_id: String) -> void:
 func _on_run_started() -> void:
 	card_panel.visible = false
 	claim_panel.visible = false
+	boss_box.visible = false
+	hint_label.modulate.a = 0.0
 
 
 func _on_run_ended(report: Dictionary) -> void:
 	claim_text.text = _format_report(report)
+	if bool(report.get("victory", false)):
+		_show_claim_panel()
+		return
+	# A loss gets a beat. The Monster is still falling out of frame at this
+	# point (player.gd drives that), so the report waits behind a fade
+	# instead of landing on top of the moment it is reporting on.
+	var tween := create_tween()
+	tween.set_ignore_time_scale(true)  # Juice.hit_stop has time_scale at 0
+	fade.color = DEFEAT_FADE
+	tween.tween_interval(0.45)
+	tween.tween_property(fade, "color:a", 0.9, 0.55)
+	tween.tween_interval(0.2)
+	tween.tween_callback(_show_claim_panel)
+	tween.tween_property(fade, "color:a", 0.0, 0.45)
+
+
+func _show_claim_panel() -> void:
 	claim_panel.visible = true
 	_focus_control(restart_button)
 

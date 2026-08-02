@@ -133,10 +133,14 @@ var _fall_speed: float = 0.0
 var auto_fire: bool = false
 var _surface_friction: float = 1.0
 var _surface_accel: float = 1.0
+## Set when Coverage hits zero. The Monster stops taking input and takes one
+## last unpaid trip out of frame; see _process_death.
+var _dead: bool = false
 
 
 func _ready() -> void:
 	base_sprite_scale = sprite.scale.abs()
+	Events.player_died.connect(_on_player_died)
 	auto_fire = bool(Settings.get_value("auto_fire"))
 	Settings.changed.connect(func(key: String, value: Variant) -> void:
 		if key == "auto_fire":
@@ -154,6 +158,9 @@ func apply_camera_bounds(bounds: Rect2) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if _dead:
+		_process_death(delta)
+		return
 	_surface_friction = 1.0
 	_surface_accel = 1.0
 	_update_timers(delta)
@@ -597,10 +604,58 @@ func _update_visuals(delta: float) -> void:
 		sprite.modulate.a = 1.0
 
 
+## --- Death ------------------------------------------------------------------
+## Events.player_died had no listeners at all, so running out of Coverage
+## simply swapped in a paperwork overlay with no moment of loss in between.
+## The Monster now gets popped off its feet and drops out of frame, which is
+## the oldest and clearest way to say "that one was yours".
+
+func _on_player_died(_cause: String) -> void:
+	if _dead:
+		return
+	_dead = true
+	dashing = false
+	impact_dashing = false
+	pounding = false
+	charging = false
+	Events.charge_changed.emit(0.0)
+	velocity = Vector2(-facing * 200.0, -540.0)
+	# Stop colliding with everything: the fall out of the level is the point.
+	collision_layer = 0
+	collision_mask = 0
+	Sfx.play_pitched("player_hurt", -3.0)
+	Juice.hit_stop(0.22)
+	Juice.shake(13.0, 0.7)
+
+
+func _process_death(delta: float) -> void:
+	velocity.y = minf(velocity.y + fall_gravity * delta, max_fall_speed)
+	sprite.rotation += delta * 8.0 * -facing
+	move_and_slide()
+
+
+## Main calls this as each room loads, including the first room after a death.
+func reset_for_room() -> void:
+	_dead = false
+	dashing = false
+	impact_dashing = false
+	pounding = false
+	charging = false
+	velocity = Vector2.ZERO
+	invulnerability_timer = 0.0
+	attack_buffer_timer = 0.0
+	_refilled_wall_normal = 0.0
+	sprite.rotation = 0.0
+	sprite.modulate.a = 1.0
+	collision_layer = 2
+	collision_mask = 1
+	set_physics_process(true)
+
+
 ## Entry point for enemies and hazards. I-frames live here; run-level
 ## Coverage accounting lives in GameManager.
 func hurt(amount: int, source: String) -> void:
-	if invulnerability_timer > 0.0 or dashing or impact_dashing:
+	if _dead or invulnerability_timer > 0.0 or dashing or impact_dashing:
 		return
 	invulnerability_timer = maxf(invulnerability_time + GameManager.stat("invuln_time"), 0.2)
 	pounding = false
