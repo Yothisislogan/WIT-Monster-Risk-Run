@@ -67,8 +67,20 @@ jobs:
           mkdir -p ~/.local/share/godot/export_templates
           mv /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable ~/.local/share/godot/export_templates/
 
-      - name: Import assets
-        run: godot --headless --import || true
+      # This is the only place in the entire pipeline where a .gd file is ever
+      # parsed — there is no Godot binary in the dev environment, and the
+      # Python checkers read the source as text. The `|| true` here used to
+      # swallow the result, so a parse error, which stops the game loading at
+      # all, produced a green build. The exit code is still ignored (a first
+      # import legitimately reports missing .import files) but the log is not.
+      - name: Import assets, and fail if any script does not parse
+        run: |
+          godot --headless --import 2>&1 | tee import.log || true
+          if grep -nE "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|Identifier .* not declared" import.log; then
+            echo "::error::a GDScript file failed to parse - see the lines above"
+            exit 1
+          fi
+          echo "all scripts parsed"
 
       - name: Export web build
         run: |
