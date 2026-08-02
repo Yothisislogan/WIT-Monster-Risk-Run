@@ -81,7 +81,7 @@ func _emit(sound: String, pitch: float, volume_scale: float) -> void:
 	var now := _now()
 	if now - float(_last_played.get(sound, -99.0)) < RETRIGGER_GUARD:
 		return
-	var stream := _get(sound)
+	var stream := _stream_for(sound)
 	if stream == null:
 		return
 	_last_played[sound] = now
@@ -94,7 +94,10 @@ func _emit(sound: String, pitch: float, volume_scale: float) -> void:
 	player.play()
 
 
-func _get(sound: String) -> AudioStream:
+## Named _stream_for rather than _get: `_get` is Object's virtual property
+## accessor, and redefining it with a different signature stops this script
+## and every script that references Sfx from compiling at all.
+func _stream_for(sound: String) -> AudioStream:
 	if _cache.has(sound):
 		return _cache[sound]
 	var path := SFX_DIR + sound + ".wav"

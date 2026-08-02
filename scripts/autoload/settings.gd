@@ -39,7 +39,7 @@ func get_value(key: String, fallback: Variant = null) -> Variant:
 	var settings: Dictionary = SaveManager.get_section("settings")
 	if settings.has(key):
 		return settings[key]
-	var device := _device_default(key)
+	var device: Variant = _device_default(key)
 	if device != null:
 		return device
 	if fallback != null:

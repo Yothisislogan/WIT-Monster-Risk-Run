@@ -4,7 +4,9 @@ extends Area2D
 
 @export var damage: int = 12
 @export var lifetime: float = 4.0
-@export var gravity: float = 0.0
+## Not `gravity`: Area2D declares one natively and redefining it is a
+## parse error that stops the scene loading.
+@export var fall_gravity: float = 0.0
 
 var velocity: Vector2 = Vector2.ZERO
 var _age: float = 0.0
@@ -16,7 +18,7 @@ func launch(from: Vector2, initial_velocity: Vector2, dmg: int, grav: float = 0.
 	global_position = from
 	velocity = initial_velocity
 	damage = dmg
-	gravity = grav
+	fall_gravity = grav
 	_age = 0.0
 
 
@@ -25,7 +27,7 @@ func _physics_process(delta: float) -> void:
 	if _age > lifetime:
 		queue_free()
 		return
-	velocity.y += gravity * delta
+	velocity.y += fall_gravity * delta
 	global_position += velocity * delta
 	visual.rotation += 9.0 * delta
 	# Pulse so it stays legible against a busy background.

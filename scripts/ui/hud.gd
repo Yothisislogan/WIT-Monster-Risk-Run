@@ -501,7 +501,8 @@ func _update_danger_arrows() -> void:
 			arrow.visible = false
 		return
 	var centre := camera.get_screen_center_position()
-	var size := get_viewport_rect().size
+	# CanvasLayer is a Node, not a CanvasItem, so it has no get_viewport_rect().
+	var size := get_viewport().get_visible_rect().size
 	var margin := 46.0
 	var index := 0
 	for enemy in get_tree().get_nodes_in_group("enemies"):

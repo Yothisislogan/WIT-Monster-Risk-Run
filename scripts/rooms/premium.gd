@@ -7,7 +7,9 @@ extends Area2D
 @export var value: int = 1
 @export var magnet_radius: float = 130.0
 @export var magnet_speed: float = 900.0
-@export var gravity: float = 1400.0
+## Not `gravity`: Area2D declares one natively and redefining it is a
+## parse error that stops the scene loading.
+@export var fall_gravity: float = 1400.0
 @export var max_fall_speed: float = 900.0
 ## Only dropped coins expire. Hand-placed ones stay until they are collected.
 @export var drop_lifetime: float = 25.0
@@ -88,7 +90,7 @@ func _magnetise(delta: float) -> bool:
 
 
 func _fall(delta: float) -> void:
-	_velocity.y = minf(_velocity.y + gravity * delta, max_fall_speed)
+	_velocity.y = minf(_velocity.y + fall_gravity * delta, max_fall_speed)
 	_velocity.x = move_toward(_velocity.x, 0.0, 420.0 * delta)
 	global_position += _velocity * delta
 	if _velocity.y <= 0.0:
