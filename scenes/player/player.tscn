@@ -1,7 +1,7 @@
-[gd_scene load_steps=11 format=3 uid="uid://witplayer00001"]
+[gd_scene load_steps=12 format=3 uid="uid://witplayer00001"]
 
 [ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
-[ext_resource type="Texture2D" path="res://icon.svg" id="2_icon"]
+[ext_resource type="Script" path="res://scripts/player/monster_visual.gd" id="2_visual"]
 [ext_resource type="Script" path="res://scripts/weapons/projectile_pool.gd" id="3_pool"]
 [ext_resource type="PackedScene" path="res://scenes/player/projectile.tscn" id="4_proj"]
 [ext_resource type="Script" path="res://scripts/player/camera_rig.gd" id="5_cam"]
@@ -20,14 +20,67 @@ size = Vector2(30, 18)
 [sub_resource type="CircleShape2D" id="CircleShape2D_pound"]
 radius = 110.0
 
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_impact"]
+size = Vector2(62, 48)
+
 [node name="Player" type="CharacterBody2D" groups=["player"]]
 collision_layer = 2
 collision_mask = 1
 script = ExtResource("1_player")
 
-[node name="Sprite" type="Sprite2D" parent="."]
-scale = Vector2(0.4, 0.4)
-texture = ExtResource("2_icon")
+[node name="Sprite" type="Node2D" parent="."]
+script = ExtResource("2_visual")
+
+[node name="HornLeft" type="Polygon2D" parent="Sprite"]
+polygon = PackedVector2Array(-16, -18, -10, -32, -4, -18)
+color = Color(0.09, 0.35, 0.68, 1)
+
+[node name="HornRight" type="Polygon2D" parent="Sprite"]
+polygon = PackedVector2Array(4, -18, 10, -32, 16, -18)
+color = Color(0.09, 0.35, 0.68, 1)
+
+[node name="Body" type="Polygon2D" parent="Sprite"]
+polygon = PackedVector2Array(-19, 8, -17, -10, -9, -20, 9, -20, 17, -10, 19, 8, 14, 20, -14, 20)
+color = Color(0.12, 0.48, 0.88, 1)
+
+[node name="Belly" type="Polygon2D" parent="Sprite"]
+polygon = PackedVector2Array(-11, 6, 11, 6, 8, 19, -8, 19)
+color = Color(0.35, 0.68, 0.98, 1)
+
+[node name="EyeLeft" type="Polygon2D" parent="Sprite"]
+polygon = PackedVector2Array(-13, -13, -3, -13, -3, -3, -13, -3)
+color = Color(1, 1, 1, 1)
+
+[node name="EyeRight" type="Polygon2D" parent="Sprite"]
+polygon = PackedVector2Array(3, -13, 13, -13, 13, -3, 3, -3)
+color = Color(1, 1, 1, 1)
+
+[node name="PupilLeft" type="Polygon2D" parent="Sprite"]
+position = Vector2(-8, -8)
+polygon = PackedVector2Array(-3, -3, 3, -3, 3, 3, -3, 3)
+color = Color(0.05, 0.12, 0.24, 1)
+
+[node name="PupilRight" type="Polygon2D" parent="Sprite"]
+position = Vector2(8, -8)
+polygon = PackedVector2Array(-3, -3, 3, -3, 3, 3, -3, 3)
+color = Color(0.05, 0.12, 0.24, 1)
+
+[node name="LidLeft" type="Polygon2D" parent="Sprite"]
+position = Vector2(-8, -13)
+scale = Vector2(1, 0)
+polygon = PackedVector2Array(-5, 0, 5, 0, 5, 10, -5, 10)
+color = Color(0.09, 0.38, 0.72, 1)
+
+[node name="LidRight" type="Polygon2D" parent="Sprite"]
+position = Vector2(8, -13)
+scale = Vector2(1, 0)
+polygon = PackedVector2Array(-5, 0, 5, 0, 5, 10, -5, 10)
+color = Color(0.09, 0.38, 0.72, 1)
+
+[node name="Mouth" type="Polygon2D" parent="Sprite"]
+position = Vector2(0, 8)
+polygon = PackedVector2Array(-7, -2, 7, -2, 5, 3, -5, 3)
+color = Color(0.05, 0.12, 0.24, 1)
 
 [node name="Collision" type="CollisionShape2D" parent="."]
 shape = SubResource("CapsuleShape2D_body")
@@ -66,6 +119,13 @@ collision_mask = 68
 
 [node name="Collision" type="CollisionShape2D" parent="PoundArea"]
 shape = SubResource("CircleShape2D_pound")
+
+[node name="ImpactArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 68
+
+[node name="Collision" type="CollisionShape2D" parent="ImpactArea"]
+shape = SubResource("RectangleShape2D_impact")
 
 [node name="Camera" type="Camera2D" parent="."]
 position_smoothing_enabled = true

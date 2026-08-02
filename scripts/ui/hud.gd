@@ -7,6 +7,10 @@ signal restart_requested
 
 const PATCH_COST := 40
 const PATCH_HEAL := 45
+## Losses fade through dried blood rather than black, so a death reads
+## differently from a room transition even before the report appears.
+const DEFEAT_FADE := Color(0.22, 0.02, 0.05, 0.0)
+const ROOM_FADE := Color(0.0, 0.0, 0.0, 1.0)
 
 @onready var coverage_bar: ProgressBar = %CoverageBar
 @onready var coverage_label: Label = %CoverageLabel
@@ -37,9 +41,12 @@ const PATCH_HEAL := 45
 @onready var hint_label: Label = %HintLabel
 @onready var inventory_label: Label = %InventoryLabel
 @onready var quit_button: Button = %QuitButton
+@onready var fade: ColorRect = %Fade
 
 var _banner_tween: Tween
 var _rng := RandomNumberGenerator.new()
+var _arrow_pool: Array[Polygon2D] = []
+var _pause_held: bool = false
 
 
 func _ready() -> void:
@@ -51,8 +58,11 @@ func _ready() -> void:
 	Events.currency_changed.connect(_on_currency_changed)
 	Events.shield_changed.connect(_on_shield_changed)
 	Events.ability_energy_changed.connect(_on_ability_energy_changed)
+	Events.ability_changed.connect(_on_ability_changed)
+	Events.ability_granted.connect(_on_ability_granted)
 	Events.combo_changed.connect(_on_combo_changed)
 	_rng.randomize()
+	_build_danger_arrows()
 	Events.risk_changed.connect(_on_risk_changed)
 	Events.boss_spawned.connect(_on_boss_spawned)
 	Events.boss_health_changed.connect(_on_boss_health_changed)
@@ -84,10 +94,13 @@ func _refresh_music_button() -> void:
 
 
 func _process(_delta: float) -> void:
+	_poll_pause()
 	# The card picker also pauses, so do not stack the two overlays.
-	var show_pause := get_tree().paused and not card_panel.visible
+	_update_danger_arrows()
+	var show_pause := get_tree().paused and not _modal_open()
 	if show_pause and not pause_panel.visible:
 		_refresh_inventory()
+		_focus_control(resume_button)
 	pause_panel.visible = show_pause
 
 
@@ -100,17 +113,49 @@ func _on_quit_pressed() -> void:
 
 ## Pause doubles as the inventory screen (§23): what you are actually holding.
 func _refresh_inventory() -> void:
+	var lines: Array[String] = []
+	for id in GameManager.abilities:
+		var ability := Abilities.entry(String(id))
+		var equipped := " (equipped)" if String(id) == GameManager.current_ability() else ""
+		lines.append("◆ %s%s" % [String(ability.get("name", "")), equipped])
+	var combo := GameManager.active_combo()
+	if not combo.is_empty():
+		lines.append("◆ %s — %s" % [
+			String(combo.get("name", "")), String(combo.get("blurb", ""))])
 	var entries := GameManager.card_list()
 	if entries.is_empty():
-		inventory_label.text = "No endorsements held."
+		lines.append("")
+		lines.append("No endorsements held.")
+		inventory_label.text = "\n".join(lines)
 		return
-	var lines: Array[String] = []
+	lines.append("")
 	for entry in entries:
 		var card: PolicyCard = entry["card"]
 		var stacks := int(entry["stacks"])
 		var suffix := " x%d" % stacks if stacks > 1 else ""
 		lines.append("• %s%s" % [card.title, suffix])
 	inventory_label.text = "\n".join(lines)
+
+
+## --- Controller focus (§6 parity) ------------------------------------------
+## Every overlay that pauses the game has to hand a gamepad somewhere to
+## start, or the pad simply does nothing while the overlay is up. Focus is
+## grabbed a frame late because the buttons are built in the same call.
+
+func _focus_control(control: Control) -> void:
+	if control == null:
+		return
+	control.call_deferred("grab_focus")
+
+
+func _focus_first(container: Node) -> void:
+	for child in container.get_children():
+		if child is Control and (child as Control).focus_mode != Control.FOCUS_NONE \
+				and not (child as Control).is_class("Label"):
+			if child is BaseButton and (child as BaseButton).disabled:
+				continue
+			_focus_control(child)
+			return
 
 
 ## One-time contextual teaching, so no tutorial level is needed (§32).
@@ -129,11 +174,31 @@ func _hint(id: String, text: String) -> void:
 	tween.tween_property(hint_label, "modulate:a", 0.0, 0.6)
 
 
-func _unhandled_input(event: InputEvent) -> void:
+## Any overlay that pauses the tree on purpose. The pause panel keys off
+## get_tree().paused, so without this it draws on top of the Claim Map and the
+## site panel — both of which pause for their own reasons. Membership is a
+## group rather than a list of references so a new overlay opts in by joining
+## it, instead of by remembering to edit this file.
+func _modal_open() -> bool:
 	if card_panel.visible:
+		return true
+	for node in get_tree().get_nodes_in_group("modal_overlay"):
+		if node is CanvasLayer and (node as CanvasLayer).visible:
+			return true
+	return false
+
+
+## Pause is polled with our own edge detector rather than handled as an event,
+## because virtual buttons drive input through Input.action_press(), which
+## sets the action state without ever synthesising an InputEvent — so an
+## event-based handler is invisible to the on-screen pause button.
+func _poll_pause() -> void:
+	var held := Input.is_action_pressed("pause")
+	var just_pressed := held and not _pause_held
+	_pause_held = held
+	if not just_pressed or card_panel.visible or not GameManager.run_active:
 		return
-	if event.is_action_pressed("pause") and GameManager.run_active:
-		get_tree().paused = not get_tree().paused
+	get_tree().paused = not get_tree().paused
 
 
 func _on_coverage_changed(current: int, maximum: int) -> void:
@@ -181,18 +246,56 @@ func _on_ability_energy_changed(current: float, maximum: float) -> void:
 	ability_bar.value = current
 	# Bright label = ready to fire; dim = still charging (colorblind-safe
 	# because the bar length carries the same information).
-	var ready := current >= GameManager.ABILITY_COST
+	var ready := current >= GameManager.ability_cost()
 	ability_label.modulate = Color.WHITE if ready else Color(1, 1, 1, 0.4)
+
+
+## The label names the equipped ability rather than assuming Flame Draft, and
+## says so when a combination is changing how it behaves (§14).
+func _on_ability_changed(ability_id: String) -> void:
+	var entry := Abilities.entry(ability_id)
+	var text := String(entry.get("name", "ABILITY"))
+	if GameManager.abilities.size() > 1:
+		text += "  (%d/%d)" % [GameManager.ability_index + 1, GameManager.abilities.size()]
+	var combo := GameManager.active_combo()
+	if not combo.is_empty():
+		text += "  ·  %s" % String(combo.get("name", ""))
+	ability_label.text = text
+
+
+func _on_ability_granted(ability_id: String) -> void:
+	var entry := Abilities.entry(ability_id)
+	var combo := GameManager.active_combo()
+	var lines := ["ABILITY ABSORBED — %s" % String(entry.get("name", "")),
+			String(entry.get("blurb", ""))]
+	if not combo.is_empty():
+		lines.append("%s unlocked: %s" % [
+			String(combo.get("name", "")), String(combo.get("blurb", ""))])
+	if GameManager.abilities.size() > 1:
+		lines.append("Kept for good — every future run starts with both. Press CYCLE to swap.")
+	# Not a one-time hint: absorbing a power is rare enough to always announce.
+	hint_label.text = "\n".join(lines)
+	hint_label.modulate.a = 0.0
+	var tween := create_tween()
+	tween.tween_property(hint_label, "modulate:a", 1.0, 0.3)
+	tween.tween_interval(4.2)
+	tween.tween_property(hint_label, "modulate:a", 0.0, 0.6)
+	Sfx.play("pickup_card")
 
 
 ## Room-entry banner: names the Risk Zone, then gets out of the way fast.
 func _on_room_started(path: String) -> void:
+	# Fade up from black so a room swap reads as a cut, not a pop. The whole
+	# colour is reset, not just alpha — a previous defeat left it red.
+	fade.color = ROOM_FADE
+	var fade_tween := create_tween()
+	fade_tween.tween_property(fade, "color:a", 0.0, 0.35)
 	boss_box.visible = false
 	var entry := LevelData.entry(path)
 	banner_name.text = String(entry.get("name", "UNSURVEYED RISK"))
 	banner_sub.text = String(entry.get("subtitle", ""))
-	banner_room.text = "ROOM %d / %d" % [
-		GameManager.room_index + 1, GameManager.room_sequence.size()]
+	var progress := GameManager.route_progress()
+	banner_room.text = "SITE %d / %d" % [progress.x, progress.y]
 	_hint("double_jump", "Tap JUMP again in mid-air to double jump")
 	if _banner_tween != null and _banner_tween.is_valid():
 		_banner_tween.kill()
@@ -249,6 +352,9 @@ func _on_cards_offered(cards: Array) -> void:
 	card_panel.visible = true
 	get_tree().paused = true
 	Sfx.play("ui_move")
+	# Without this the run's central decision is mouse/touch only: a gamepad
+	# has nothing focused to move away from (§6 controller parity).
+	_focus_first(card_row)
 
 
 ## Spend Premiums instead of taking an endorsement (§15 shop, compressed into
@@ -311,15 +417,41 @@ func _on_card_picked(card_id: String) -> void:
 func _on_run_started() -> void:
 	card_panel.visible = false
 	claim_panel.visible = false
+	boss_box.visible = false
+	hint_label.modulate.a = 0.0
 
 
 func _on_run_ended(report: Dictionary) -> void:
 	claim_text.text = _format_report(report)
+	if bool(report.get("victory", false)):
+		_show_claim_panel()
+		return
+	# A loss gets a beat. The Monster is still falling out of frame at this
+	# point (player.gd drives that), so the report waits behind a fade
+	# instead of landing on top of the moment it is reporting on.
+	var tween := create_tween()
+	tween.set_ignore_time_scale(true)  # Juice.hit_stop has time_scale at 0
+	fade.color = DEFEAT_FADE
+	tween.tween_interval(0.45)
+	tween.tween_property(fade, "color:a", 0.9, 0.55)
+	tween.tween_interval(0.2)
+	tween.tween_callback(_show_claim_panel)
+	tween.tween_property(fade, "color:a", 0.0, 0.45)
+
+
+func _show_claim_panel() -> void:
 	claim_panel.visible = true
+	_focus_control(restart_button)
 
 
 func _format_report(report: Dictionary) -> String:
 	var prose := ClaimReport.compose(report, _rng)
+	# What the run bought you permanently goes last, so the eye lands on it —
+	# it is the reason to press RESTART rather than close the app (§24).
+	var tail: Array[String] = ["", "CASE FILES FILED:  %d  (%d on hand)" % [
+		int(report.get("case_files_awarded", 0)), Headquarters.case_files()]]
+	for file in report.get("case_files_new", []):
+		tail.append("   NEW CASE FILE — %s" % String(file.get("title", "")))
 	return "\n".join([
 		"Cause of loss:  %s" % prose["cause"],
 		"Contributing factor:  %s" % prose["factor"],
@@ -336,4 +468,53 @@ func _format_report(report: Dictionary) -> String:
 			report.get("estimated_property_damage", 0)),
 		"",
 		"CLAIM STATUS:  %s" % prose["status"],
-	])
+	] + tail)
+
+
+## --- Off-screen danger indicators (§17) ------------------------------------
+## Arrows at the screen edge for perils you cannot see yet. Without these,
+## an Ember Imp diving from off-camera reads as an unfair hit.
+func _update_danger_arrows() -> void:
+	if _arrow_pool.is_empty():
+		return
+	var camera := get_viewport().get_camera_2d()
+	if camera == null or not GameManager.run_active:
+		for arrow in _arrow_pool:
+			arrow.visible = false
+		return
+	var centre := camera.get_screen_center_position()
+	var size := get_viewport_rect().size
+	var margin := 46.0
+	var index := 0
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if index >= _arrow_pool.size():
+			break
+		if not is_instance_valid(enemy):
+			continue
+		var offset: Vector2 = enemy.global_position - centre
+		# Only flag things that are genuinely off screen but still close by.
+		if absf(offset.x) < size.x * 0.5 and absf(offset.y) < size.y * 0.5:
+			continue
+		if offset.length() > 900.0:
+			continue
+		var arrow: Polygon2D = _arrow_pool[index]
+		index += 1
+		var edge := Vector2(
+			clampf(offset.x, -size.x * 0.5 + margin, size.x * 0.5 - margin),
+			clampf(offset.y, -size.y * 0.5 + margin, size.y * 0.5 - margin))
+		arrow.position = size * 0.5 + edge
+		arrow.rotation = offset.angle()
+		arrow.visible = true
+	for i in range(index, _arrow_pool.size()):
+		_arrow_pool[i].visible = false
+
+
+func _build_danger_arrows() -> void:
+	for i in 6:
+		var arrow := Polygon2D.new()
+		arrow.polygon = PackedVector2Array([
+			Vector2(14, 0), Vector2(-8, -9), Vector2(-3, 0), Vector2(-8, 9)])
+		arrow.color = Color(1.0, 0.4, 0.35, 0.85)
+		arrow.visible = false
+		$Root.add_child(arrow)
+		_arrow_pool.append(arrow)

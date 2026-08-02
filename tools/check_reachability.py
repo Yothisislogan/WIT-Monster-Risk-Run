@@ -38,7 +38,8 @@ def reach_run(rise, double):
 
 # --- scene parsing ----------------------------------------------------------
 # instanced platform scenes -> collision size
-INSTANCED = {"moving_platform.tscn": (160.0, 28.0)}
+INSTANCED = {"moving_platform.tscn": (160.0, 28.0),
+             "collapsing_platform.tscn": (140.0, 28.0)}
 
 def parse_room(path):
     text = path.read_text()

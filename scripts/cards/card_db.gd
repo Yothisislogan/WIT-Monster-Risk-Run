@@ -140,10 +140,20 @@ static func by_id(id: String) -> PolicyCard:
 ## Draw `count` distinct offers the player can still take. `risk` biases the
 ## roll toward rarer cards and exclusions — taking risks pays out (§11).
 static func draw_offers(count: int, held: Dictionary, risk: float, rng: RandomNumberGenerator) -> Array:
+	# WIT Headquarters gates part of the catalogue (§24). Everything common
+	# stays available from the first run, so an early pool is smaller rather
+	# than worse, and Exclusions are opt-in so a new player is never handed a
+	# cursed card before they know what a card is (§10).
+	var locked := Headquarters.locked_cards()
+	var allow_exclusions := Headquarters.exclusions_unlocked()
 	var candidates: Array = []
 	for data in CARDS:
 		var card := PolicyCard.make(data)
 		if int(held.get(card.id, 0)) >= card.max_stacks:
+			continue
+		if card.id in locked:
+			continue
+		if card.is_exclusion and not allow_exclusions:
 			continue
 		candidates.append(card)
 	if candidates.is_empty():

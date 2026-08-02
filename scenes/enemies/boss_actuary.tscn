@@ -1,0 +1,86 @@
+[gd_scene load_steps=6 format=3 uid="uid://witbossact0001"]
+
+[ext_resource type="Script" path="res://scripts/enemies/boss_actuary.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/fireball.tscn" id="2_fireball"]
+[ext_resource type="PackedScene" path="res://scenes/rooms/premium.tscn" id="3_premium"]
+
+[sub_resource type="RectangleShape2D" id="rect_body"]
+size = Vector2(84, 88)
+
+[sub_resource type="RectangleShape2D" id="rect_beam"]
+size = Vector2(1600, 26)
+
+[node name="BossActuary" type="CharacterBody2D" groups=["boss"]]
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("1_script")
+max_health = 380
+contact_damage = 13
+currency_reward = 60
+defeat_source = "reassessed by the Actuary"
+weaken_ratio = 0.0
+premium_scene = ExtResource("3_premium")
+premium_drops = 8
+death_color = Color(0.6, 0.75, 1, 1)
+always_active = true
+fireball_scene = ExtResource("2_fireball")
+
+[node name="Visual" type="Node2D" parent="."]
+
+[node name="Halo" type="Node2D" parent="Visual"]
+
+[node name="RingA" type="Polygon2D" parent="Visual/Halo"]
+polygon = PackedVector2Array(-62, -4, -54, -12, 54, -12, 62, -4, 54, 4, -54, 4)
+color = Color(0.36, 0.62, 0.95, 0.55)
+
+[node name="RingB" type="Polygon2D" parent="Visual/Halo"]
+polygon = PackedVector2Array(-4, -62, 4, -54, 4, 54, -4, 62, -12, 54, -12, -54)
+color = Color(0.36, 0.62, 0.95, 0.35)
+
+[node name="Body" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(0, -46, 38, 0, 0, 46, -38, 0)
+color = Color(0.22, 0.3, 0.48, 1)
+
+[node name="Plate" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(0, -30, 25, 0, 0, 30, -25, 0)
+color = Color(0.36, 0.62, 0.95, 1)
+
+[node name="Lens" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(-13, -7, 13, -7, 9, 8, -9, 8)
+color = Color(0.85, 0.95, 1, 1)
+
+[node name="Ledger" type="Polygon2D" parent="Visual"]
+position = Vector2(34, 18)
+polygon = PackedVector2Array(-11, -15, 11, -15, 11, 15, -11, 15)
+color = Color(0.88, 0.86, 0.78, 1)
+
+[node name="Collision" type="CollisionShape2D" parent="."]
+shape = SubResource("rect_body")
+
+[node name="Hitbox" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="Collision" type="CollisionShape2D" parent="Hitbox"]
+shape = SubResource("rect_body")
+
+[node name="Beam" type="Node2D" parent="."]
+top_level = true
+visible = false
+
+[node name="BeamVisual" type="Polygon2D" parent="Beam"]
+polygon = PackedVector2Array(-800, -13, 800, -13, 800, 13, -800, 13)
+color = Color(1, 0.85, 0.4, 0.4)
+
+[node name="BeamArea" type="Area2D" parent="Beam"]
+collision_layer = 0
+collision_mask = 2
+monitoring = false
+
+[node name="Collision" type="CollisionShape2D" parent="Beam/BeamArea"]
+shape = SubResource("rect_beam")
+
+[node name="OnScreen" type="VisibleOnScreenNotifier2D" parent="."]
+rect = Rect2(-60, -60, 120, 120)
+
+[connection signal="body_entered" from="Beam/BeamArea" to="." method="_on_beam_body_entered"]

@@ -31,6 +31,7 @@ var is_elite: bool = false
 
 
 func _ready() -> void:
+	add_to_group("enemies")
 	# Perils scale with the Risk Meter (§11), applied once at spawn.
 	max_health = maxi(int(round(float(max_health) * GameManager.enemy_health_factor())), 1)
 	_maybe_promote_to_elite()

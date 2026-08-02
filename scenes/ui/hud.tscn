@@ -143,6 +143,14 @@ theme_override_font_sizes/font_size = 18
 text = "STREAK x2  (1x PREMIUMS)"
 horizontal_alignment = 2
 
+[node name="Fade" type="ColorRect" parent="Root"]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
+
 [node name="BossBox" type="VBoxContainer" parent="Root"]
 unique_name_in_owner = true
 visible = false

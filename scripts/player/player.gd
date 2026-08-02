@@ -34,6 +34,11 @@ extends CharacterBody2D
 @export var coyote_time: float = 0.12
 @export var jump_buffer_time: float = 0.15
 
+## §6's attack buffer. A press that arrives while the weapon is still on
+## cooldown is remembered rather than swallowed, so tapping through a landing
+## fires the moment the weapon is free instead of eating the input.
+@export var attack_buffer_time: float = 0.12
+
 # --- Dash (buffer ~100ms per §6) ---
 @export var dash_speed: float = 780.0
 @export var dash_duration: float = 0.16
@@ -62,12 +67,34 @@ extends CharacterBody2D
 @export var projectile_damage: int = 10
 @export var charged_damage: int = 30
 
+# --- Aiming (§6: "mild vertical correction toward nearby enemies") ---
+## Holding up, or down in mid-air, tilts the shot. This is the scheme every
+## side-scroller since Contra has used and it costs no new button — move_up
+## was declared in project.godot and read by nothing at all until now.
+@export var aim_tilt_degrees: float = 45.0
+## Auto-assist for everything else. It leans the shot toward a target inside
+## a cone; it deliberately does not home, and the correction cap is what keeps
+## "mild" honest — a shot can never end up travelling backwards.
+@export var aim_assist_range: float = 560.0
+@export var aim_assist_cone_degrees: float = 42.0
+@export var aim_assist_max_correction_degrees: float = 20.0
+
 # --- Damage response ---
 @export var invulnerability_time: float = 0.8
 @export var hurt_knockback: Vector2 = Vector2(260.0, -300.0)
 
-# --- Flame Draft (equipped boss ability, §12) ---
+# --- Flame Draft (absorbed boss ability, §12) ---
 @export var flame_damage: int = 25
+
+# --- Impact Dash (absorbed boss ability, §12) ---
+## Longer, faster and heavier than the normal dash: it damages everything it
+## passes through instead of just repositioning you.
+@export var impact_dash_speed: float = 980.0
+@export var impact_dash_duration: float = 0.26
+@export var impact_damage: int = 35
+## MELTDOWN CHARGE (§14): with Flame Draft also held, the charge ignites.
+@export var impact_burn_damage: int = 5
+@export var impact_burn_ticks: int = 4
 
 @onready var sprite: Node2D = $Sprite
 @onready var muzzle: Marker2D = $Muzzle
@@ -76,13 +103,18 @@ extends CharacterBody2D
 @onready var munch_area: Area2D = $MunchArea
 @onready var stomp_area: Area2D = $StompArea
 @onready var pound_area: Area2D = $PoundArea
+@onready var impact_area: Area2D = $ImpactArea
 
 var facing: int = 1
 var coyote_timer: float = 0.0
 var jump_buffer_timer: float = 0.0
 var dash_buffer_timer: float = 0.0
+var attack_buffer_timer: float = 0.0
 var wall_coyote_timer: float = 0.0
 var last_wall_normal: float = 0.0
+## Which wall last paid for an air-jump refill this airtime. Cleared on
+## landing; see _process_wall.
+var _refilled_wall_normal: float = 0.0
 
 var air_jumps_left: int = 0
 
@@ -93,6 +125,11 @@ var air_dash_available: bool = true
 
 var pounding: bool = false
 var pound_hang_timer: float = 0.0
+
+var impact_dashing: bool = false
+var impact_timer: float = 0.0
+## Instance ids already hit by the current charge, so one pass is one hit.
+var _impact_hit: Array[int] = []
 
 var charging: bool = false
 var charge_timer: float = 0.0
@@ -106,10 +143,16 @@ var _fall_speed: float = 0.0
 
 
 var auto_fire: bool = false
+var _surface_friction: float = 1.0
+var _surface_accel: float = 1.0
+## Set when Coverage hits zero. The Monster stops taking input and takes one
+## last unpaid trip out of frame; see _process_death.
+var _dead: bool = false
 
 
 func _ready() -> void:
 	base_sprite_scale = sprite.scale.abs()
+	Events.player_died.connect(_on_player_died)
 	auto_fire = bool(Settings.get_value("auto_fire"))
 	Settings.changed.connect(func(key: String, value: Variant) -> void:
 		if key == "auto_fire":
@@ -127,10 +170,17 @@ func apply_camera_bounds(bounds: Rect2) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if _dead:
+		_process_death(delta)
+		return
+	_surface_friction = 1.0
+	_surface_accel = 1.0
 	_update_timers(delta)
 	_read_action_buffers()
 
-	if dashing:
+	if impact_dashing:
+		_process_impact_dash(delta)
+	elif dashing:
 		_process_dash(delta)
 	elif pounding:
 		_process_pound(delta)
@@ -157,6 +207,7 @@ func _update_timers(delta: float) -> void:
 	coyote_timer = maxf(coyote_timer - delta, 0.0)
 	jump_buffer_timer = maxf(jump_buffer_timer - delta, 0.0)
 	dash_buffer_timer = maxf(dash_buffer_timer - delta, 0.0)
+	attack_buffer_timer = maxf(attack_buffer_timer - delta, 0.0)
 	wall_coyote_timer = maxf(wall_coyote_timer - delta, 0.0)
 	dash_cooldown_timer = maxf(dash_cooldown_timer - delta, 0.0)
 	fire_timer = maxf(fire_timer - delta, 0.0)
@@ -168,6 +219,11 @@ func _read_action_buffers() -> void:
 		jump_buffer_timer = jump_buffer_time
 	if Input.is_action_just_pressed("dash"):
 		dash_buffer_timer = dash_buffer_time
+	# Only a press the weapon cannot act on right now is worth remembering.
+	# _process_weapon ignores a press while fire_timer is running, which is
+	# exactly the "shot in the air, land, tap again" case §6 is about.
+	if Input.is_action_just_pressed("attack") and fire_timer > 0.0:
+		attack_buffer_timer = attack_buffer_time
 
 
 func _apply_gravity(delta: float) -> void:
@@ -195,24 +251,40 @@ func _bonus_air_jumps() -> int:
 	return int(GameManager.stat("air_jumps"))
 
 
+## Slippery surfaces call this every frame they are underfoot. It only ever
+## reduces grip, and it resets each frame so stepping off restores control.
+func apply_surface(friction_mult: float, accel_mult: float) -> void:
+	_surface_friction = minf(_surface_friction, friction_mult)
+	_surface_accel = minf(_surface_accel, accel_mult)
+
+
 func _process_walk(delta: float) -> void:
 	var direction := Input.get_axis("move_left", "move_right")
 	if direction != 0.0:
 		facing = 1 if direction > 0.0 else -1
 		var accel := ground_accel if is_on_floor() else air_accel
+		if is_on_floor():
+			accel *= _surface_accel
 		velocity.x = move_toward(velocity.x, direction * _speed(), accel * delta)
 	elif is_on_floor():
-		velocity.x = move_toward(velocity.x, 0.0, ground_friction * delta)
+		velocity.x = move_toward(velocity.x, 0.0, ground_friction * _surface_friction * delta)
 
 
-func _process_wall(delta: float) -> void:
+func _process_wall(_delta: float) -> void:
 	if is_on_wall_only() and _pressing_into_wall() and velocity.y > 0.0:
 		# Wall cling: slow slide while holding toward the wall.
 		velocity.y = minf(velocity.y, wall_slide_speed)
 		wall_coyote_timer = wall_coyote_time
-		last_wall_normal = get_wall_normal().x
-		# Touching a wall refreshes the air jump so wall chains stay expressive.
-		air_jumps_left = _max_air_jumps()
+		var normal := get_wall_normal().x
+		last_wall_normal = normal
+		# Grabbing a wall refreshes the air jump so chimney chains stay
+		# expressive — but only on a wall facing the other way. Refreshing on
+		# every cling frame let you wall-jump off a single flat wall, double
+		# jump back into it, and climb forever, which would make the jump
+		# budget tools/check_reachability.py enforces meaningless.
+		if signf(normal) != signf(_refilled_wall_normal):
+			_refilled_wall_normal = normal
+			air_jumps_left = _max_air_jumps()
 
 
 func _pressing_into_wall() -> bool:
@@ -238,7 +310,7 @@ func _try_jump() -> void:
 		Sfx.play("wall_jump")
 		Juice.jump_puff(global_position)
 		_squash = Vector2(0.85, 1.18)
-	elif air_jumps_left > 0 or _bonus_air_jumps() > 0:
+	elif air_jumps_left > 0:
 		# Double jump: hard reset of vertical speed so it always feels the same,
 		# whether tapped at the apex or during a long fall.
 		air_jumps_left -= 1
@@ -318,13 +390,12 @@ func _land_pound() -> void:
 	Juice.shake(9.0, 0.35)
 	Juice.hit_stop(0.06)
 	_squash = Vector2(1.5, 0.55)
-	# Shockwave damages everything grounded nearby and pops open crates.
+	# Shockwave damages everything grounded nearby. Crates are StaticBody2D on
+	# the pickup layer, so they come through this loop too — the only Area2Ds
+	# in the mask are Premiums and card pickups, which nothing here can break.
 	for body in pound_area.get_overlapping_bodies():
 		if body.has_method("take_damage"):
 			body.take_damage(pound_damage + int(GameManager.stat("pound_damage")))
-	for area in pound_area.get_overlapping_areas():
-		if area.has_method("shatter"):
-			area.shatter()
 
 
 ## Landing on an enemy from above stomps it instead of hurting the player.
@@ -358,6 +429,12 @@ func _process_weapon(delta: float) -> void:
 			and not Input.is_action_pressed("attack"):
 		_fire(projectile_damage, false)
 		Sfx.play("shoot", 0.08, 0.8)
+	# Spend a buffered press the moment the weapon is free again.
+	if attack_buffer_timer > 0.0 and fire_timer <= 0.0 and not charging:
+		attack_buffer_timer = 0.0
+		_fire(projectile_damage, false)
+		Sfx.play("shoot")
+		return
 	# Charging never blocks running or jumping (§7).
 	if Input.is_action_just_pressed("attack") and fire_timer <= 0.0:
 		charging = true
@@ -385,21 +462,127 @@ func _fire(damage: int, pierce: bool) -> void:
 	fire_timer = fire_cooldown * GameManager.factor("fire_rate_mult")
 	var scaled := maxi(int(round(float(damage) * GameManager.factor("damage_mult"))), 1)
 	var projectile: Node2D = projectile_pool.acquire()
-	projectile.launch(muzzle.global_position, facing, scaled, pierce)
+	projectile.launch(muzzle.global_position, aim_direction(), scaled, pierce)
 
 
-## Flame Draft: costs ability energy, pierces, and ignites what it hits.
+## Where the next shot goes. Explicit aim always wins over the assist, so a
+## player who is aiming is never fought by the game for the barrel.
+func aim_direction() -> Vector2:
+	var forward := Vector2(facing, 0.0)
+	var tilt := 0.0
+	if Input.is_action_pressed("move_up"):
+		tilt = -1.0
+	elif Input.is_action_pressed("move_down") and not is_on_floor():
+		tilt = 1.0
+	if tilt != 0.0:
+		# Up or down with no horizontal input fires straight along that axis.
+		if is_zero_approx(Input.get_axis("move_left", "move_right")):
+			return Vector2(0.0, tilt)
+		return forward.rotated(deg_to_rad(aim_tilt_degrees) * tilt * float(facing))
+	return _assisted(forward)
+
+
+func _assisted(forward: Vector2) -> Vector2:
+	var origin := muzzle.global_position
+	var cone := deg_to_rad(aim_assist_cone_degrees)
+	var best: Node2D = null
+	var best_distance := aim_assist_range
+	for node in get_tree().get_nodes_in_group("enemies"):
+		if not is_instance_valid(node):
+			continue
+		var enemy := node as Node2D
+		var offset := enemy.global_position - origin
+		var distance := offset.length()
+		# Nearest target inside the cone wins: predictable, and it means
+		# backing away from a swarm re-targets rather than losing the lock.
+		if distance >= best_distance or distance < 1.0:
+			continue
+		if absf(forward.angle_to(offset)) > cone:
+			continue
+		best = enemy
+		best_distance = distance
+	if best == null:
+		return forward
+	var limit := deg_to_rad(aim_assist_max_correction_degrees)
+	var to_target := best.global_position - origin
+	return forward.rotated(clampf(forward.angle_to(to_target), -limit, limit))
+
+
+## The equipped boss ability (§12). Which one fires is data rather than a
+## hard-coded branch: GameManager owns what has been absorbed and what is up,
+## so a third boss only needs an entry in Abilities plus a case here.
 func _process_ability() -> void:
-	if not Input.is_action_just_pressed("special"):
+	if Input.is_action_just_pressed("cycle_ability"):
+		GameManager.cycle_ability()
+	if not Input.is_action_just_pressed("special") or impact_dashing:
 		return
 	if not GameManager.try_spend_ability_energy():
 		return
+	match GameManager.current_ability():
+		Abilities.IMPACT_DASH:
+			_start_impact_dash()
+		_:
+			_fire_flame_draft()
+
+
+## Flame Draft: costs ability energy, pierces, and ignites what it hits.
+func _fire_flame_draft() -> void:
 	var flame: Node2D = flame_pool.acquire()
-	flame.launch(muzzle.global_position, facing,
+	flame.launch(muzzle.global_position, aim_direction(),
 			int(round(float(flame_damage) * GameManager.factor("damage_mult"))), true)
 	Sfx.play("flame_draft")
 	Juice.shake(5.0, 0.2)
 	_squash = Vector2(1.2, 0.85)
+
+
+## Impact Dash: an armoured charge that damages everything it passes through.
+func _start_impact_dash() -> void:
+	impact_dashing = true
+	dashing = false
+	pounding = false
+	impact_timer = impact_dash_duration
+	_impact_hit.clear()
+	var direction := Input.get_axis("move_left", "move_right")
+	if direction != 0.0:
+		facing = 1 if direction > 0.0 else -1
+	velocity = Vector2(facing * impact_dash_speed, 0.0)
+	# Armoured for the whole charge — that is what makes it worth the energy.
+	invulnerability_timer = maxf(invulnerability_timer, impact_dash_duration)
+	# Same sample as the normal dash, pitched down: the ear reads it as the
+	# heavy version of a move it already knows.
+	Sfx.play_pitched("dash", -5.0)
+	Juice.dust(_feet_position(), 14)
+	Juice.shake(6.0, 0.25)
+	_squash = Vector2(1.45, 0.68)
+
+
+func _process_impact_dash(delta: float) -> void:
+	impact_timer -= delta
+	velocity = Vector2(facing * impact_dash_speed, 0.0)
+	_sweep_impact()
+	if impact_timer <= 0.0 or is_on_wall():
+		impact_dashing = false
+		velocity.x = facing * move_speed
+		air_dash_available = true
+		_squash = Vector2(0.82, 1.2)
+
+
+func _sweep_impact() -> void:
+	# Holding both abilities upgrades the charge rather than adding a button.
+	var meltdown := not GameManager.active_combo().is_empty()
+	var damage := maxi(int(round(float(impact_damage) * GameManager.factor("damage_mult"))), 1)
+	for body in impact_area.get_overlapping_bodies():
+		if not body.has_method("take_damage"):
+			continue
+		var id := body.get_instance_id()
+		if id in _impact_hit:
+			continue  # one pass is one hit, however long the overlap lasts
+		_impact_hit.append(id)
+		body.take_damage(damage)
+		if meltdown and body.has_method("apply_burn"):
+			body.apply_burn(impact_burn_damage, impact_burn_ticks)
+		Juice.hit_spark(body.global_position)
+		Juice.hit_stop(0.04)
 
 
 ## Monster Munch: consume a nearby weakened enemy (§7).
@@ -422,6 +605,7 @@ func launch(power: float) -> void:
 	air_jumps_left = _max_air_jumps()
 	air_dash_available = true
 	pounding = false
+	impact_dashing = false
 	_squash = Vector2(0.7, 1.35)
 	Sfx.play("bounce")
 	Juice.jump_puff(_feet_position())
@@ -434,6 +618,7 @@ func _after_move() -> void:
 		coyote_timer = coyote_time
 		air_dash_available = true
 		air_jumps_left = _max_air_jumps()
+		_refilled_wall_normal = 0.0
 		if not _was_on_floor:
 			_on_landed()
 	_was_on_floor = on_floor
@@ -474,10 +659,58 @@ func _update_visuals(delta: float) -> void:
 		sprite.modulate.a = 1.0
 
 
+## --- Death ------------------------------------------------------------------
+## Events.player_died had no listeners at all, so running out of Coverage
+## simply swapped in a paperwork overlay with no moment of loss in between.
+## The Monster now gets popped off its feet and drops out of frame, which is
+## the oldest and clearest way to say "that one was yours".
+
+func _on_player_died(_cause: String) -> void:
+	if _dead:
+		return
+	_dead = true
+	dashing = false
+	impact_dashing = false
+	pounding = false
+	charging = false
+	Events.charge_changed.emit(0.0)
+	velocity = Vector2(-facing * 200.0, -540.0)
+	# Stop colliding with everything: the fall out of the level is the point.
+	collision_layer = 0
+	collision_mask = 0
+	Sfx.play_pitched("player_hurt", -3.0)
+	Juice.hit_stop(0.22)
+	Juice.shake(13.0, 0.7)
+
+
+func _process_death(delta: float) -> void:
+	velocity.y = minf(velocity.y + fall_gravity * delta, max_fall_speed)
+	sprite.rotation += delta * 8.0 * -facing
+	move_and_slide()
+
+
+## Main calls this as each room loads, including the first room after a death.
+func reset_for_room() -> void:
+	_dead = false
+	dashing = false
+	impact_dashing = false
+	pounding = false
+	charging = false
+	velocity = Vector2.ZERO
+	invulnerability_timer = 0.0
+	attack_buffer_timer = 0.0
+	_refilled_wall_normal = 0.0
+	sprite.rotation = 0.0
+	sprite.modulate.a = 1.0
+	collision_layer = 2
+	collision_mask = 1
+	set_physics_process(true)
+
+
 ## Entry point for enemies and hazards. I-frames live here; run-level
 ## Coverage accounting lives in GameManager.
 func hurt(amount: int, source: String) -> void:
-	if invulnerability_timer > 0.0 or dashing:
+	if _dead or invulnerability_timer > 0.0 or dashing or impact_dashing:
 		return
 	invulnerability_timer = maxf(invulnerability_time + GameManager.stat("invuln_time"), 0.2)
 	pounding = false

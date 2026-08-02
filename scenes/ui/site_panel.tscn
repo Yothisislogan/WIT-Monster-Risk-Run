@@ -1,0 +1,82 @@
+[gd_scene load_steps=3 format=3 uid="uid://witsite000001"]
+
+[ext_resource type="Script" path="res://scripts/ui/site_panel.gd" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="style_site"]
+bg_color = Color(0.07, 0.08, 0.13, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.42, 0.5, 0.72, 0.9)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[node name="SitePanel" type="CanvasLayer" groups=["modal_overlay"]]
+layer = 18
+script = ExtResource("1_script")
+
+[node name="Root" type="Control" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 1
+
+[node name="Dim" type="ColorRect" parent="Root"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.03, 0.04, 0.07, 0.88)
+
+[node name="SitePanelBody" type="PanelContainer" parent="Root"]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 96.0
+offset_top = 40.0
+offset_right = -96.0
+offset_bottom = -40.0
+theme_override_styles/panel = SubResource("style_site")
+
+[node name="Margin" type="MarginContainer" parent="Root/SitePanelBody"]
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 24
+
+[node name="VBox" type="VBoxContainer" parent="Root/SitePanelBody/Margin"]
+theme_override_constants/separation = 10
+
+[node name="SiteTitle" type="Label" parent="Root/SitePanelBody/Margin/VBox"]
+unique_name_in_owner = true
+theme_override_font_sizes/font_size = 26
+text = "SITE"
+
+[node name="SiteProse" type="Label" parent="Root/SitePanelBody/Margin/VBox"]
+unique_name_in_owner = true
+modulate = Color(1, 1, 1, 0.78)
+theme_override_font_sizes/font_size = 17
+autowrap_mode = 3
+text = ""
+
+[node name="SiteOptions" type="VBoxContainer" parent="Root/SitePanelBody/Margin/VBox"]
+unique_name_in_owner = true
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+
+[node name="SiteResult" type="Label" parent="Root/SitePanelBody/Margin/VBox"]
+unique_name_in_owner = true
+modulate = Color(0.75, 1, 0.8, 1)
+theme_override_font_sizes/font_size = 18
+autowrap_mode = 3
+text = ""
+
+[node name="SiteLeave" type="Button" parent="Root/SitePanelBody/Margin/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 54)
+theme_override_font_sizes/font_size = 19
+text = "LEAVE"

@@ -83,6 +83,37 @@ label_text = "SPEC"
 button_color = Color(0.65, 0.4, 0.9, 0.55)
 pressed_color = Color(0.65, 0.4, 0.9, 0.9)
 
+[node name="PauseButton" type="Control" parent="Root"]
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -104.0
+offset_top = 24.0
+offset_right = -32.0
+offset_bottom = 96.0
+mouse_filter = 2
+script = ExtResource("3_button")
+action = &"pause"
+label_text = "II"
+button_color = Color(0.55, 0.58, 0.68, 0.45)
+pressed_color = Color(0.55, 0.58, 0.68, 0.85)
+
+[node name="CycleButton" type="Control" parent="Root"]
+visible = false
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -440.0
+offset_top = -400.0
+offset_right = -360.0
+offset_bottom = -320.0
+mouse_filter = 2
+script = ExtResource("3_button")
+action = &"cycle_ability"
+label_text = "SWAP"
+button_color = Color(0.45, 0.6, 0.95, 0.55)
+pressed_color = Color(0.45, 0.6, 0.95, 0.9)
+
 [node name="MunchButton" type="Control" parent="Root"]
 anchor_left = 1.0
 anchor_top = 1.0

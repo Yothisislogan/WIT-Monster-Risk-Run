@@ -9,6 +9,7 @@ const GAME_SCENE := "res://scenes/main.tscn"
 @onready var deductible_panel: PanelContainer = %DeductiblePanel
 @onready var deductible_rows: VBoxContainer = %DeductibleRows
 @onready var settings_panel: PanelContainer = %SettingsPanel
+@onready var headquarters: PanelContainer = %HeadquartersPanel
 @onready var record_label: Label = %RecordLabel
 
 
@@ -16,9 +17,16 @@ func _ready() -> void:
 	Settings.apply_all()
 	settings_panel.visible = false
 	deductible_panel.visible = false
+	headquarters.visible = false
+	headquarters.closed.connect(func() -> void:
+		headquarters.visible = false
+		menu.visible = true
+		_show_record()
+		_build_menu())
 	settings_panel.closed.connect(func() -> void:
 		settings_panel.visible = false
-		menu.visible = true)
+		menu.visible = true
+		_build_menu())
 	_build_menu()
 	_build_deductibles()
 	_show_record()
@@ -28,21 +36,46 @@ func _ready() -> void:
 func _show_record() -> void:
 	var lifetime: Dictionary = SaveManager.get_section("stats")
 	var runs := int(lifetime.get("runs", 0))
+	var lines: Array[String] = []
 	if runs == 0:
-		record_label.text = "No claims on file."
-		return
-	record_label.text = "Claims filed: %d     Survived: %d     Worst loss: $%s" % [
-		runs, int(lifetime.get("wins", 0)),
-		ClaimReport.money(int(lifetime.get("best_property_damage", 0)))]
+		lines.append("No claims on file.")
+	else:
+		lines.append("Claims filed: %d     Survived: %d     Worst loss: $%s" % [
+			runs, int(lifetime.get("wins", 0)),
+			ClaimReport.money(int(lifetime.get("best_property_damage", 0)))])
+	# WIT Headquarters (§24): powers taken off bosses are the one thing that
+	# survives a run, so the title screen is where you see them accumulate.
+	var unlocked := GameManager.unlocked_abilities()
+	if unlocked.size() > 1:
+		var names: Array[String] = []
+		for id in unlocked:
+			names.append(String(Abilities.entry(String(id)).get("name", "")))
+		lines.append("Powers absorbed: " + "  ·  ".join(names))
+		var combo := Abilities.combo_for(unlocked)
+		if not combo.is_empty():
+			lines.append("%s active — %s" % [
+				String(combo.get("name", "")), String(combo.get("blurb", ""))])
+	record_label.text = "\n".join(lines)
 
 
 func _build_menu() -> void:
 	for child in menu.get_children():
+		menu.remove_child(child)
 		child.queue_free()
+	var first: Button = null
 	if SaveManager.has_resumable_run():
-		menu.add_child(_button("CONTINUE RUN", _on_continue))
-	menu.add_child(_button("NEW POLICY", _on_new_policy))
+		first = _button("CONTINUE RUN", _on_continue)
+		menu.add_child(first)
+	var new_policy := _button("NEW POLICY", _on_new_policy)
+	menu.add_child(new_policy)
+	menu.add_child(_button("WIT HEADQUARTERS", _on_headquarters))
 	menu.add_child(_button("OPTIONS", _on_options))
+	# A controller needs something focused or the whole title screen is inert.
+	# Focus the button we just made, not menu.get_child(0) — the old buttons
+	# are only queue_freed and would still be there to be picked up.
+	if first == null:
+		first = new_policy
+	first.call_deferred("grab_focus")
 
 
 func _button(text: String, handler: Callable) -> Button:
@@ -85,12 +118,22 @@ func _on_new_policy() -> void:
 	Sfx.play("ui_move")
 	menu.visible = false
 	deductible_panel.visible = true
+	# STANDARD is the middle row and the sane default to land on.
+	(deductible_rows.get_child(1) as Button).call_deferred("grab_focus")
+
+
+func _on_headquarters() -> void:
+	Sfx.play("ui_move")
+	menu.visible = false
+	headquarters.visible = true
+	headquarters.refresh()
 
 
 func _on_options() -> void:
 	Sfx.play("ui_move")
 	menu.visible = false
 	settings_panel.visible = true
+	settings_panel.focus_first()
 
 
 func _on_deductible_picked(key: String) -> void:

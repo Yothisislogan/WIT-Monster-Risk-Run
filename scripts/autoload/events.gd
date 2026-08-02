@@ -9,6 +9,8 @@ signal player_died(cause: String)
 signal shield_changed(active: bool)
 signal charge_changed(ratio: float)
 signal ability_energy_changed(current: float, maximum: float)
+signal ability_changed(ability_id: String)
+signal ability_granted(ability_id: String)
 signal combo_changed(count: int, ratio: float)
 signal risk_changed(value: float)
 
@@ -27,6 +29,14 @@ signal card_chosen(card_id: String)
 # Economy / upgrades
 signal currency_changed(amount: int)
 signal upgrade_gained(upgrade_id: String)
+
+# Claim Map (§5, §15): routing between sites
+signal map_opened(available: Array)
+signal node_chosen(node_id: int)
+signal node_entered(node_id: int, kind: int)
+## A non-combat site: the HUD presents it and answers with site_resolved.
+signal site_opened(node_id: int, kind: int)
+signal site_resolved
 
 # Run / room flow
 signal room_started(room_path: String)

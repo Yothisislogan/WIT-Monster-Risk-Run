@@ -18,6 +18,19 @@ ROOT = Path(__file__).resolve().parent.parent
 DECL = re.compile(
     r'^\s*(?:@export\s+)?(?:static\s+)?(?:func|var|const|signal|enum)\s+([A-Za-z_]\w*)', re.M)
 CLASS_NAME = re.compile(r'^class_name\s+([A-Za-z_]\w*)', re.M)
+
+# Godot built-ins a game script is plausibly tempted to name a class after.
+# Not exhaustive -- the engine has hundreds -- but these are the collisions
+# that actually happen, and each one is a hard project-load failure.
+RESERVED_CLASS_NAMES = {
+    "Node", "Node2D", "Node3D", "Object", "RefCounted", "Resource", "Timer",
+    "Area2D", "Camera2D", "Sprite2D", "Label", "Button", "Control", "Window",
+    "Line2D", "Path2D", "Curve2D", "Marker2D", "Polygon2D", "TileMap",
+    "CharacterBody2D", "RigidBody2D", "StaticBody2D", "AnimationPlayer",
+    "Tween", "Signal", "Callable", "Script", "Engine", "Input", "Time",
+    "Performance", "Geometry2D", "Color", "Rect2", "Transform2D", "Vector2",
+    "Material", "Shader", "Texture2D", "Image", "Font", "Theme", "Environment",
+}
 # Members inherited from Node/Object that autoloads legitimately expose.
 BUILTIN = {
     "new", "call", "call_deferred", "set", "get", "free", "queue_free", "connect",
@@ -55,11 +68,34 @@ def main():
             autoloads[name] = declarations(path)
 
     # --- class_name declarations ------------------------------------------
+    # A duplicated global class name, or one that collides with an autoload or
+    # a built-in, is a project-wide parse error: Godot refuses to load anything
+    # at all. Keying a dict by name silently hid that -- the second decl just
+    # overwrote the first and this checker stayed green while the game would
+    # not open.
     classes = {}
-    for gd in ROOT.rglob("*.gd"):
+    declared_in = {}
+    for gd in sorted(ROOT.rglob("*.gd")):
         m = CLASS_NAME.search(gd.read_text())
-        if m:
-            classes[m.group(1)] = declarations(gd)
+        if not m:
+            continue
+        name = m.group(1)
+        rel = str(gd.relative_to(ROOT))
+        if name in declared_in:
+            problems.append(
+                f"{rel}: class_name {name} is already declared in "
+                f"{declared_in[name]} — a duplicate global class name stops the "
+                f"whole project loading")
+            continue
+        if name in autoloads:
+            problems.append(
+                f"{rel}: class_name {name} collides with the autoload of the "
+                f"same name")
+        if name in RESERVED_CLASS_NAMES:
+            problems.append(
+                f"{rel}: class_name {name} shadows a Godot built-in class")
+        declared_in[name] = rel
+        classes[name] = declarations(gd)
 
     targets = {}
     targets.update(classes)

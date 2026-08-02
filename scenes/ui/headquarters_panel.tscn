@@ -1,0 +1,76 @@
+[gd_scene load_steps=3 format=3 uid="uid://withq00000001"]
+
+[ext_resource type="Script" path="res://scripts/ui/headquarters_panel.gd" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="style_hq"]
+bg_color = Color(0.06, 0.08, 0.12, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.36, 0.62, 0.95, 0.9)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[node name="HeadquartersPanel" type="PanelContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 64.0
+offset_top = 32.0
+offset_right = -64.0
+offset_bottom = -32.0
+theme_override_styles/panel = SubResource("style_hq")
+script = ExtResource("1_script")
+
+[node name="Margin" type="MarginContainer" parent="."]
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 20
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+theme_override_constants/separation = 8
+
+[node name="HqTitle" type="Label" parent="Margin/VBox"]
+theme_override_font_sizes/font_size = 26
+text = "WIT HEADQUARTERS"
+
+[node name="HqBlurb" type="Label" parent="Margin/VBox"]
+modulate = Color(1, 1, 1, 0.7)
+theme_override_font_sizes/font_size = 16
+autowrap_mode = 3
+text = "Every claim you file teaches the company something. This is where it spends what it learned."
+
+[node name="HqFiles" type="Label" parent="Margin/VBox"]
+unique_name_in_owner = true
+modulate = Color(1, 0.9, 0.5, 1)
+theme_override_font_sizes/font_size = 19
+text = "CASE FILES ON HAND:  0"
+
+[node name="Scroll" type="ScrollContainer" parent="Margin/VBox"]
+size_flags_vertical = 3
+
+[node name="Inner" type="VBoxContainer" parent="Margin/VBox/Scroll"]
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="HqRows" type="VBoxContainer" parent="Margin/VBox/Scroll/Inner"]
+unique_name_in_owner = true
+theme_override_constants/separation = 8
+
+[node name="CaseHeader" type="Label" parent="Margin/VBox/Scroll/Inner"]
+theme_override_font_sizes/font_size = 20
+text = "CASE FILES"
+
+[node name="HqCaseRows" type="VBoxContainer" parent="Margin/VBox/Scroll/Inner"]
+unique_name_in_owner = true
+theme_override_constants/separation = 4
+
+[node name="HqClose" type="Button" parent="Margin/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 52)
+theme_override_font_sizes/font_size = 19
+text = "BACK"
