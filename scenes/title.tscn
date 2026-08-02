@@ -43,7 +43,7 @@ offset_right = 420.0
 offset_bottom = 130.0
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.32, 0.68, 1, 1)
-theme_override_font_sizes/font_size = 54
+theme_override_font_sizes/font_size = 68
 text = "WIT MONSTER"
 horizontal_alignment = 1
 
@@ -57,7 +57,7 @@ offset_right = 420.0
 offset_bottom = 166.0
 mouse_filter = 2
 theme_override_colors/font_color = Color(1, 0.78, 0.3, 1)
-theme_override_font_sizes/font_size = 30
+theme_override_font_sizes/font_size = 40
 text = "RISK RUN"
 horizontal_alignment = 1
 
@@ -84,7 +84,7 @@ offset_top = -54.0
 offset_bottom = -20.0
 mouse_filter = 2
 theme_override_colors/font_color = Color(1, 1, 1, 0.5)
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 23
 text = "No claims on file."
 horizontal_alignment = 1
 
@@ -111,13 +111,13 @@ theme_override_constants/margin_bottom = 20
 theme_override_constants/separation = 12
 
 [node name="Title" type="Label" parent="DeductiblePanel/Margin/VBox"]
-theme_override_font_sizes/font_size = 26
+theme_override_font_sizes/font_size = 34
 text = "CHOOSE YOUR DEDUCTIBLE"
 horizontal_alignment = 1
 
 [node name="Hint" type="Label" parent="DeductiblePanel/Margin/VBox"]
 theme_override_colors/font_color = Color(1, 1, 1, 0.6)
-theme_override_font_sizes/font_size = 15
+theme_override_font_sizes/font_size = 22
 text = "A higher deductible means thinner Coverage and angrier perils — and much better cards."
 horizontal_alignment = 1
 autowrap_mode = 3

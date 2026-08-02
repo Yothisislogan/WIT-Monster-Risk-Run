@@ -81,8 +81,8 @@ func _build_menu() -> void:
 func _button(text: String, handler: Callable) -> Button:
 	var button := Button.new()
 	button.text = text
-	button.custom_minimum_size = Vector2(360, 62)
-	button.add_theme_font_size_override("font_size", 22)
+	button.custom_minimum_size = Vector2(420, 78)
+	button.add_theme_font_size_override("font_size", 30)
 	button.pressed.connect(handler)
 	return button
 
@@ -93,9 +93,9 @@ func _build_deductibles() -> void:
 	for key in ["low", "standard", "high"]:
 		var preset: Dictionary = GameManager.DEDUCTIBLES[key]
 		var button := Button.new()
-		button.custom_minimum_size = Vector2(0, 88)
+		button.custom_minimum_size = Vector2(0, 146)
 		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		button.add_theme_font_size_override("font_size", 19)
+		button.add_theme_font_size_override("font_size", 26)
 		button.text = "%s\n%s\nStarting Coverage %d" % [
 			preset["label"], preset["blurb"], int(preset["coverage"])]
 		match key:

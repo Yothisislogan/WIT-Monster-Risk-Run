@@ -41,19 +41,19 @@ func _build() -> void:
 
 func _build_row(option: Dictionary) -> Control:
 	var row := HBoxContainer.new()
-	row.custom_minimum_size = Vector2(0, 46)
+	row.custom_minimum_size = Vector2(0, 60)
 	row.add_theme_constant_override("separation", 16)
 
 	var label := Label.new()
 	label.text = String(option["label"])
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	label.add_theme_font_size_override("font_size", 18)
+	label.add_theme_font_size_override("font_size", 25)
 	row.add_child(label)
 
 	var key := String(option["key"])
 	if String(option["type"]) == "toggle":
 		var button := Button.new()
-		button.custom_minimum_size = Vector2(150, 42)
+		button.custom_minimum_size = Vector2(172, 54)
 		button.toggle_mode = true
 		button.button_pressed = bool(Settings.get_value(key, option["default"]))
 		button.text = "ON" if button.button_pressed else "OFF"
@@ -65,12 +65,12 @@ func _build_row(option: Dictionary) -> Control:
 	else:
 		var value := float(Settings.get_value(key, option["default"]))
 		var readout := Label.new()
-		readout.custom_minimum_size = Vector2(64, 0)
-		readout.add_theme_font_size_override("font_size", 17)
+		readout.custom_minimum_size = Vector2(84, 0)
+		readout.add_theme_font_size_override("font_size", 24)
 		readout.text = "%d%%" % int(round(value * 100.0))
 
 		var slider := HSlider.new()
-		slider.custom_minimum_size = Vector2(260, 42)
+		slider.custom_minimum_size = Vector2(280, 54)
 		slider.min_value = float(option.get("min", 0.0))
 		slider.max_value = float(option.get("max", 1.0))
 		slider.step = 0.05

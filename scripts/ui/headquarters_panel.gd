@@ -53,9 +53,9 @@ func _build_upgrade_button(upgrade: Dictionary) -> Button:
 	var maximum := int(upgrade["ranks"])
 	var cost := Headquarters.next_cost(id)
 	var button := Button.new()
-	button.custom_minimum_size = Vector2(0, 92)
+	button.custom_minimum_size = Vector2(0, 130)
 	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	button.add_theme_font_size_override("font_size", 16)
+	button.add_theme_font_size_override("font_size", 23)
 
 	var head := String(upgrade["title"])
 	if maximum > 1:
@@ -95,7 +95,7 @@ func _build_case_files() -> void:
 		var got := id in earned
 		var label := Label.new()
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		label.add_theme_font_size_override("font_size", 15)
+		label.add_theme_font_size_override("font_size", 22)
 		# Unearned files still show their name and condition: an achievement
 		# you cannot read is not a goal, it is a surprise.
 		label.text = "%s  %s — %s" % [

@@ -259,8 +259,11 @@ func _on_ability_energy_changed(current: float, maximum: float) -> void:
 	ability_bar.value = current
 	# Bright label = ready to fire; dim = still charging (colorblind-safe
 	# because the bar length carries the same information).
+	# Not-ready is a cooler, dimmer colour rather than 40% alpha: at 40% the
+	# readout vanished into whatever was scrolling behind it, which is the
+	# opposite of what a readout is for.
 	var ready := current >= GameManager.ability_cost()
-	ability_label.modulate = Color.WHITE if ready else Color(1, 1, 1, 0.4)
+	ability_label.modulate = Color.WHITE if ready else Color(0.58, 0.63, 0.74, 1)
 
 
 ## The label names the equipped ability rather than assuming Flame Draft, and
@@ -383,9 +386,9 @@ func _build_patch_button() -> Button:
 	var cost := PATCH_COST
 	var button := Button.new()
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button.custom_minimum_size = Vector2(0, 200)
+	button.custom_minimum_size = Vector2(0, 480)
 	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	button.add_theme_font_size_override("font_size", 17)
+	button.add_theme_font_size_override("font_size", 22)
 	var affordable := GameManager.currency >= cost
 	button.text = "\n".join([
 		"PATCH UP", "",
@@ -410,9 +413,9 @@ func _on_patch_picked() -> void:
 func _build_card_button(card: PolicyCard) -> Button:
 	var button := Button.new()
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button.custom_minimum_size = Vector2(0, 200)
+	button.custom_minimum_size = Vector2(0, 480)
 	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	button.add_theme_font_size_override("font_size", 17)
+	button.add_theme_font_size_override("font_size", 22)
 	var lines := [card.title.to_upper(), "", card.text]
 	if card.is_exclusion:
 		lines.append("")

@@ -53,13 +53,13 @@ theme_override_constants/separation = 10
 
 [node name="SiteTitle" type="Label" parent="Root/SitePanelBody/Margin/VBox"]
 unique_name_in_owner = true
-theme_override_font_sizes/font_size = 26
+theme_override_font_sizes/font_size = 34
 text = "SITE"
 
 [node name="SiteProse" type="Label" parent="Root/SitePanelBody/Margin/VBox"]
 unique_name_in_owner = true
-modulate = Color(1, 1, 1, 0.78)
-theme_override_font_sizes/font_size = 17
+modulate = Color(0.82, 0.86, 0.94, 1)
+theme_override_font_sizes/font_size = 24
 autowrap_mode = 3
 text = ""
 
@@ -71,12 +71,12 @@ theme_override_constants/separation = 8
 [node name="SiteResult" type="Label" parent="Root/SitePanelBody/Margin/VBox"]
 unique_name_in_owner = true
 modulate = Color(0.75, 1, 0.8, 1)
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 25
 autowrap_mode = 3
 text = ""
 
 [node name="SiteLeave" type="Button" parent="Root/SitePanelBody/Margin/VBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 54)
-theme_override_font_sizes/font_size = 19
+custom_minimum_size = Vector2(0, 68)
+theme_override_font_sizes/font_size = 26
 text = "LEAVE"

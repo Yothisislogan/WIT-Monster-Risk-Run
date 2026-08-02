@@ -100,7 +100,7 @@ func _build_node_button(node: Dictionary, reachable: bool, visited: bool) -> But
 	button.size = NODE_SIZE
 	button.position = _positions[id] - NODE_SIZE * 0.5
 	button.text = ClaimMap.kind_short(kind)
-	button.add_theme_font_size_override("font_size", 15)
+	button.add_theme_font_size_override("font_size", 22)
 	button.tooltip_text = "%s — %s" % [ClaimMap.kind_name(kind), ClaimMap.kind_blurb(kind)]
 	button.disabled = not reachable
 	# Reachable is bright, visited is spent, the rest is the road not taken.

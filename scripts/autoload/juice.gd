@@ -38,7 +38,7 @@ func _ready() -> void:
 		label.top_level = true
 		label.visible = false
 		label.z_index = 200
-		label.add_theme_font_size_override("font_size", 20)
+		label.add_theme_font_size_override("font_size", 27)
 		add_child(label)
 		_numbers.append(label)
 

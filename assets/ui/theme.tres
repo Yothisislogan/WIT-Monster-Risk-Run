@@ -1,0 +1,35 @@
+[gd_resource type="Theme" format=3 uid="uid://witheme000001"]
+
+; Project-wide UI theme (GAME_DESIGN.md §23, §22).
+;
+; There was no theme at all before this: every label set its own font size ad
+; hoc, from 13px to 54px, with no outline and several at 40-78% opacity. On a
+; phone, over a scrolling parallax background, that is unreadable — and the
+; smallest offenders were the Risk readout (13px) and the ability readout
+; (14px at 40% alpha), both of which sit directly on the playfield.
+;
+; The outline is the single biggest win. Light text on a busy background needs
+; a dark edge to separate it; without one the glyphs dissolve into whatever is
+; scrolling behind them. Everything here inherits it, including any text added
+; later, which is the other reason a theme beats per-node overrides.
+
+[resource]
+default_font_size = 24
+
+Label/colors/font_color = Color(1, 1, 1, 1)
+Label/colors/font_outline_color = Color(0.02, 0.03, 0.06, 0.95)
+Label/colors/font_shadow_color = Color(0, 0, 0, 0.45)
+Label/constants/outline_size = 6
+Label/constants/shadow_offset_x = 0
+Label/constants/shadow_offset_y = 2
+Label/constants/line_spacing = 4
+Label/font_sizes/font_size = 24
+
+Button/colors/font_color = Color(1, 1, 1, 1)
+Button/colors/font_hover_color = Color(1, 1, 1, 1)
+Button/colors/font_focus_color = Color(1, 1, 1, 1)
+Button/colors/font_pressed_color = Color(0.82, 0.9, 1, 1)
+Button/colors/font_disabled_color = Color(0.62, 0.65, 0.72, 1)
+Button/colors/font_outline_color = Color(0.02, 0.03, 0.06, 0.95)
+Button/constants/outline_size = 5
+Button/font_sizes/font_size = 24

@@ -60,9 +60,9 @@ func _build_options(options: Array) -> void:
 
 func _build_option_button(option: Dictionary) -> Button:
 	var button := Button.new()
-	button.custom_minimum_size = Vector2(0, 84)
+	button.custom_minimum_size = Vector2(0, 112)
 	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	button.add_theme_font_size_override("font_size", 17)
+	button.add_theme_font_size_override("font_size", 24)
 	var cost := int(option.get("cost", 0))
 	var affordable := SiteDb.affordable(option)
 	var head := String(option.get("label", "OPTION"))
