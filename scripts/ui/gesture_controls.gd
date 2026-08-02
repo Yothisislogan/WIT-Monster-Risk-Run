@@ -82,13 +82,19 @@ func _input(event: InputEvent) -> void:
 	if not is_visible_in_tree():
 		_abort_all()
 		return
+	# Cast explicitly rather than leaning on narrowing inside the condition:
+	# InputEvent itself has no index or position, and there is no Godot here to
+	# tell us if the narrowing did not hold.
 	if event is InputEventScreenTouch:
-		if event.pressed:
-			_on_press(event.index, event.position)
+		var touch := event as InputEventScreenTouch
+		if touch.pressed:
+			_on_press(touch.index, touch.position)
 		else:
-			_on_release(event.index, event.position)
-	elif event is InputEventScreenDrag and _touches.has(event.index):
-		_touches[event.index]["position"] = event.position
+			_on_release(touch.index, touch.position)
+	elif event is InputEventScreenDrag:
+		var drag := event as InputEventScreenDrag
+		if _touches.has(drag.index):
+			_touches[drag.index]["position"] = drag.position
 
 
 func _on_press(index: int, position: Vector2) -> void:

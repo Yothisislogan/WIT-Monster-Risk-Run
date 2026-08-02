@@ -28,14 +28,17 @@ func _input(event: InputEvent) -> void:
 			_release()
 		return
 	if event is InputEventScreenTouch:
-		if event.pressed and _touch_index == -1 and get_global_rect().has_point(event.position):
-			_touch_index = event.index
-			_origin = event.position
-			_update(event.position)
-		elif not event.pressed and event.index == _touch_index:
+		var touch := event as InputEventScreenTouch
+		if touch.pressed and _touch_index == -1 and get_global_rect().has_point(touch.position):
+			_touch_index = touch.index
+			_origin = touch.position
+			_update(touch.position)
+		elif not touch.pressed and touch.index == _touch_index:
 			_release()
-	elif event is InputEventScreenDrag and event.index == _touch_index:
-		_update(event.position)
+	elif event is InputEventScreenDrag:
+		var drag := event as InputEventScreenDrag
+		if drag.index == _touch_index:
+			_update(drag.position)
 
 
 func _update(screen_position: Vector2) -> void:
