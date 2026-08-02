@@ -13,6 +13,8 @@ extends CharacterBody2D
 @export var premium_scene: PackedScene
 @export var premium_drops: int = 2
 @export var death_color: Color = Color(1.0, 0.55, 0.25)
+## Bosses and scripted enemies opt out of the off-screen processing pause.
+@export var always_active: bool = false
 
 var health: int
 var weakened: bool = false
@@ -32,10 +34,13 @@ func _ready() -> void:
 	max_health = maxi(int(round(float(max_health) * GameManager.enemy_health_factor())), 1)
 	health = max_health
 	hitbox.body_entered.connect(_on_hitbox_body_entered)
-	# Pause processing while off screen (§30).
-	visibility_notifier.screen_entered.connect(func() -> void: set_physics_process(true))
-	visibility_notifier.screen_exited.connect(func() -> void: set_physics_process(false))
-	set_physics_process(false)
+	if always_active:
+		set_physics_process(true)
+	else:
+		# Pause processing while off screen (§30).
+		visibility_notifier.screen_entered.connect(func() -> void: set_physics_process(true))
+		visibility_notifier.screen_exited.connect(func() -> void: set_physics_process(false))
+		set_physics_process(false)
 	_burn_timer = Timer.new()
 	_burn_timer.wait_time = 0.5
 	_burn_timer.timeout.connect(_on_burn_tick)

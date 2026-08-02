@@ -201,7 +201,11 @@ print(f"jump budget: single rise {SINGLE_RISE:.0f}px, double rise {DOUBLE_RISE:.
       f"(at {int(MARGIN*100)}% margin)\n")
 
 all_problems = []
-for room in sorted((ROOT / "scenes/rooms").glob("test_room_*.tscn")):
+# Any scene with a SpawnPoint is a room the player has to traverse.
+def _is_room(path):
+    return 'name="SpawnPoint"' in path.read_text()
+
+for room in sorted(r for r in (ROOT / "scenes/rooms").glob("*.tscn") if _is_room(r)):
     problems, notes = analyse(room)
     for n in notes:
         print("  ok:", n)

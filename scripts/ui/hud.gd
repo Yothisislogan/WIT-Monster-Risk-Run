@@ -28,6 +28,9 @@ signal restart_requested
 @onready var risk_label: Label = %RiskLabel
 @onready var card_panel: PanelContainer = %CardPanel
 @onready var card_row: HBoxContainer = %CardRow
+@onready var boss_box: VBoxContainer = %BossBox
+@onready var boss_name: Label = %BossName
+@onready var boss_bar: ProgressBar = %BossBar
 
 var _banner_tween: Tween
 var _rng := RandomNumberGenerator.new()
@@ -45,6 +48,8 @@ func _ready() -> void:
 	Events.combo_changed.connect(_on_combo_changed)
 	_rng.randomize()
 	Events.risk_changed.connect(_on_risk_changed)
+	Events.boss_spawned.connect(_on_boss_spawned)
+	Events.boss_health_changed.connect(_on_boss_health_changed)
 	Events.cards_offered.connect(_on_cards_offered)
 	Events.room_started.connect(_on_room_started)
 	Events.run_started.connect(_on_run_started)
@@ -132,6 +137,7 @@ func _on_ability_energy_changed(current: float, maximum: float) -> void:
 
 ## Room-entry banner: names the Risk Zone, then gets out of the way fast.
 func _on_room_started(path: String) -> void:
+	boss_box.visible = false
 	var entry := LevelData.entry(path)
 	banner_name.text = String(entry.get("name", "UNSURVEYED RISK"))
 	banner_sub.text = String(entry.get("subtitle", ""))
@@ -148,6 +154,25 @@ func _on_room_started(path: String) -> void:
 	_banner_tween.set_parallel(false)
 	_banner_tween.tween_interval(1.5)
 	_banner_tween.tween_property(banner, "modulate:a", 0.0, 0.5)
+
+
+func _on_boss_spawned(title: String, maximum: int) -> void:
+	boss_name.text = title
+	boss_bar.max_value = maximum
+	boss_bar.value = maximum
+	boss_box.visible = true
+	boss_box.modulate.a = 0.0
+	var tween := create_tween()
+	tween.tween_property(boss_box, "modulate:a", 1.0, 0.5)
+
+
+func _on_boss_health_changed(current: int, maximum: int) -> void:
+	boss_bar.max_value = maximum
+	boss_bar.value = current
+	if current <= 0:
+		var tween := create_tween()
+		tween.tween_property(boss_box, "modulate:a", 0.0, 0.8)
+		tween.tween_callback(func() -> void: boss_box.visible = false)
 
 
 func _on_risk_changed(value: float) -> void:

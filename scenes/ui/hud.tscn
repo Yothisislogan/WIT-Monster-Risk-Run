@@ -143,6 +143,34 @@ theme_override_font_sizes/font_size = 18
 text = "STREAK x2  (1x PREMIUMS)"
 horizontal_alignment = 2
 
+[node name="BossBox" type="VBoxContainer" parent="Root"]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -300.0
+offset_top = 18.0
+offset_right = 300.0
+offset_bottom = 60.0
+theme_override_constants/separation = 3
+
+[node name="BossName" type="Label" parent="Root/BossBox"]
+unique_name_in_owner = true
+theme_override_colors/font_color = Color(1, 0.72, 0.55, 1)
+theme_override_font_sizes/font_size = 18
+text = "THE INFERNO ADJUSTER"
+horizontal_alignment = 1
+
+[node name="BossBar" type="ProgressBar" parent="Root/BossBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(600, 18)
+theme_override_styles/background = SubResource("style_bar_bg")
+theme_override_styles/fill = SubResource("style_risk_fill")
+max_value = 100.0
+value = 100.0
+show_percentage = false
+
 [node name="Banner" type="VBoxContainer" parent="Root"]
 unique_name_in_owner = true
 modulate = Color(1, 1, 1, 0)

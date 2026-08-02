@@ -1,0 +1,27 @@
+[gd_scene load_steps=3 format=3 uid="uid://witfireball001"]
+
+[ext_resource type="Script" path="res://scripts/enemies/fireball.gd" id="1_script"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_fire"]
+radius = 16.0
+
+[node name="Fireball" type="Area2D"]
+collision_layer = 16
+collision_mask = 10
+script = ExtResource("1_script")
+
+[node name="Visual" type="Node2D" parent="."]
+
+[node name="Outer" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(-18, 0, -9, -15, 9, -15, 18, 0, 9, 15, -9, 15)
+color = Color(1, 0.42, 0.1, 1)
+
+[node name="Inner" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(-9, 0, -4, -8, 4, -8, 9, 0, 4, 8, -4, 8)
+color = Color(1, 0.88, 0.4, 1)
+
+[node name="Collision" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_fire")
+
+[connection signal="body_entered" from="." to="." method="_on_body_entered"]
+[connection signal="area_entered" from="." to="." method="_on_area_entered"]
