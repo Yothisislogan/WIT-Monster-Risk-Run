@@ -242,10 +242,14 @@ func _beach() -> void:
 func _set_tide(value: float) -> void:
 	_tide = clampf(value, 0.0, 1.0)
 	var height := tide_heights[mini(_phase - 1, tide_heights.size() - 1)] * _tide
-	tide_visual.scale.y = maxf(height / 100.0, 0.001)
+	var factor := maxf(height / 100.0, 0.001)
+	tide_visual.scale.y = factor
 	tide_area.position.y = -height * 0.5
-	tide_area.scale.y = maxf(height / 100.0, 0.001)
+	tide_area.scale.y = factor
 	tide_visual.color = Color(0.24, 0.62, 0.86, 0.55 + 0.2 * _tide)
+	# Stop monitoring while the water is out rather than leaving a hairline
+	# collision shape in the physics server to be queried against every frame.
+	tide_area.monitoring = _tide > 0.0
 
 
 func _drain_tide(delta: float) -> void:
