@@ -62,9 +62,18 @@ CONSTANTS = constants()
 
 
 def number(text: str | None) -> float | None:
+    """A literal, a named constant, or a base price wrapped in price(...).
+
+    Shop costs are written as price(PATCH_COST) so they scale with the
+    deductible at runtime. The scale is not knowable here; the base is, and
+    the base is what the sanity checks below are about.
+    """
     if text is None:
         return None
     text = text.strip()
+    wrapped = re.fullmatch(r"price\((\w+)\)", text)
+    if wrapped:
+        text = wrapped.group(1)
     if re.fullmatch(r"-?[\d.]+", text):
         return float(text)
     return CONSTANTS.get(text)
@@ -96,7 +105,7 @@ def parse_options(block: str) -> list[dict]:
         text = block[start:end]
         label = re.search(r'"label":\s*"([^"]*)"', text)
         detail = re.search(r'"detail":\s*"((?:[^"\\]|\\.)*)"', text)
-        cost = re.search(r'"cost":\s*([\w.-]+)', text)
+        cost = re.search(r'"cost":\s*(price\(\w+\)|[\w.-]+)', text)
         kind = re.search(r'"kind":\s*"(\w+)"', text)
         risk = re.search(r'"risk":\s*([\w.-]+)', text)
         value = re.search(r'"value":\s*([\w.-]+)', text)

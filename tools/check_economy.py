@@ -21,7 +21,7 @@ RISK_BANDS = [(0.75, "UNINSURABLE"), (0.50, "SEVERE"), (0.25, "ELEVATED"), (0.0,
 
 RISK_SOURCES = {           # Risk points added (the float field is points/100)
     "exclusion_taken": 18,
-    "room_without_healing": 6,
+    "room_without_healing": 3.5,
     "decline_card": 4,
     "suspicious_container": 5,
     "claim_deny": 14,
@@ -29,7 +29,9 @@ RISK_SOURCES = {           # Risk points added (the float field is points/100)
     "optional_challenge": 8,
     "hazard_room_entry": 8,
     "miniboss_room": 8,
-    "boss_defeated": 5,
+    # Closing an act settles the claim and releases pressure. Mirrors
+    # GameManager.RISK_RELIEF_PER_BOSS.
+    "boss_defeated": -9,
     "cancel_policy": 3,
 }
 # Diminishing accrual: each source is worth `points * (1 - RISK_DAMPING*risk)`.
@@ -72,7 +74,7 @@ DEDUCTIBLES = {
                 enemy_health=0.90, enemy_speed=0.90, premium=0.80,
                 heal_pickup=1.05, heal_munch=1.10, heal_purchase=1.10,
                 heal_spawn=0.75, risk_start=0.00, risk_floor=0.00,
-                card_quality=-0.10, lifetime=0.60, shop_price=0.90),
+                card_quality=-0.10, lifetime=0.60, shop_price=0.75),
     "standard": dict(coverage=100, damage_taken=1.00, enemy_damage=1.00,
                      enemy_health=1.00, enemy_speed=1.00, premium=1.00,
                      heal_pickup=1.00, heal_munch=1.00, heal_purchase=1.00,
@@ -87,7 +89,7 @@ DEDUCTIBLES = {
 
 # --- Healing economy (§7, §8) ----------------------------------------------
 PICKUP_HEAL_RATIO = 0.17       # of max Coverage
-MUNCH_HEAL_RATIO = 0.10
+MUNCH_HEAL_RATIO = 0.14
 PATCH_HEAL_RATIO = 0.35
 # Environmental damage (heat vents, pits) is a percentage of max Coverage, so
 # a smaller Coverage pool does not silently multiply every hazard in the game.
@@ -96,8 +98,8 @@ HEAL_SPAWN_PITY = 3            # guaranteed medkit on the Nth barren room
 
 # --- Shop (§15) -------------------------------------------------------------
 SHOP_BASE = {
-    "patch": 45, "limit_increase": 90, "card_common": 70, "card_uncommon": 120,
-    "card_rare": 190, "card_exclusion": 150, "umbrella": 55, "retainer": 240,
+    "patch": 55, "limit_increase": 110, "card_common": 88, "card_uncommon": 150,
+    "card_rare": 238, "card_exclusion": 185, "umbrella": 68, "retainer": 295,
     "seminar": 60, "briefcase": 75, "boost": 50, "cancel_policy": 40,
 }
 SHOP_INFLATION_PER_ROOM = 0.14
@@ -112,7 +114,8 @@ MINIBOSS_PAYOUT = 120
 SECRET_PAYOUT = 200
 BOSS_PAYOUT = 250
 CLEAR_MULT = {"combat": 1.25, "traversal": 1.0, "hazard": 1.40,
-              "miniboss": 1.0, "boss": 1.0, "shop": 0.0, "claim": 0.0}
+              "miniboss": 1.0, "boss": 1.0, "shop": 0.0, "claim": 0.0,
+              "rest": 0.0}
 
 # Authored room contents, measured from scenes/rooms/test_room_*.tscn.
 ROOM_CONTENT = {           # coins placed, crates(x3 coins), enemies, drops/enemy
@@ -123,14 +126,29 @@ ROOM_CONTENT = {           # coins placed, crates(x3 coins), enemies, drops/enem
     "boss":      dict(coins=0, crates=0, enemies=1, drops=8.0),
     "shop":      dict(coins=0, crates=0, enemies=0, drops=0.0),
     "claim":     dict(coins=0, crates=0, enemies=0, drops=0.0),
+    "rest":      dict(coins=0, crates=0, enemies=0, drops=0.0),
 }
 
-# The Level 1 sequence the run length target (§5: 20-35 min) is built around.
-# The two shops bracket the mini-boss spike; never more than three rooms pass
-# without one, which is what stops a bad patch becoming an unrecoverable run.
-RUN_SEQUENCE = ["combat", "traversal", "combat", "shop", "hazard", "claim",
-                "miniboss", "shop", "traversal", "combat", "boss"]
-DRAFT_AFTER = {0, 2, 4, 6, 9, 10}   # indices whose completion offers 3 cards
+# A representative route through the Claim Map (scripts/map/claim_map.gd):
+# three acts of six sites, each act opening on combat, closing on a rest and
+# then a boss, with three drawn sites between. The mix here matches the draw
+# weights in ClaimMap.WEIGHTS -- roughly 60% combat, the rest split between
+# shops, events and one mini-boss per act at most.
+#
+# This is the structure the run-length and economy targets are built against.
+# If ClaimMap's shape changes, this changes with it: tools/check_map.py owns
+# whether the *graph* is sound, and this owns whether the money works.
+RUN_SEQUENCE = [
+    # act one
+    "combat", "combat", "shop", "hazard", "rest", "boss",
+    # act two
+    "combat", "hazard", "claim", "miniboss", "rest", "boss",
+    # act three
+    "combat", "combat", "shop", "hazard", "rest", "boss",
+]
+# Cards are the reward for fighting, so only combat sites draw them.
+DRAFT_AFTER = {i for i, kind in enumerate(RUN_SEQUENCE)
+               if kind in ("combat", "hazard", "miniboss", "boss")}
 # Emergency Rider (§8 mercy rule): below this Coverage fraction a room always
 # spawns its medkit. Without it, "fewer medkits at high Risk" turns every bad
 # patch into a death spiral the player cannot see or escape.
@@ -261,6 +279,12 @@ def simulate_run(ded, profile, rng):
                 premiums -= seminar
                 add_risk(RISK_SINKS["risk_seminar"])
                 purchases.append("seminar")
+            rooms_completed += 1
+            continue
+
+        if kind == "rest":
+            # Salvage Yard: a free patch-up, always available, once per act.
+            cov = min(max_cov, cov + max_cov * PATCH_HEAL_RATIO)
             rooms_completed += 1
             continue
 
@@ -449,18 +473,37 @@ def main():
               pre <= 0.15, f"{pre:.0%} died pre-boss")
         check(f"{key[0]}/{key[1]} does not arrive at the boss already dead",
               at >= 0.45, f"{at:.0%}")
-    # The real statement: deductible and play style monotonically determine the
-    # state you meet the boss in, and the spread is wide enough to feel.
-    ladder = [("low", "careful"), ("low", "reckless"), ("standard", "careful"),
-              ("standard", "reckless"), ("high", "careful"), ("high", "reckless")]
-    arrivals = [statistics.fmean(r["coverage_at_boss"] for r in results[k] if r["reached_boss"])
-                for k in ladder]
-    check("boss-door Coverage decreases monotonically down the difficulty ladder",
-          all(a >= b - 0.005 for a, b in zip(arrivals, arrivals[1:])),
-          " > ".join(f"{a:.0%}" for a in arrivals))
-    check("the ladder spans at least 30 Coverage points",
-          arrivals[0] - arrivals[-1] >= 0.30,
-          f"{(arrivals[0] - arrivals[-1]) * 100:.0f} points")
+    # Deductible and play style are independent axes, so monotonicity is
+    # checked along each of them rather than down an interleaved list. The
+    # old version compared low/reckless against standard/careful and failed,
+    # which was the assertion being wrong: a careful player on Standard
+    # *should* reach the boss healthier than a reckless one on Low.
+    def arrival(deductible, profile):
+        rows = [r for r in results[(deductible, profile)] if r["reached_boss"]]
+        return statistics.fmean(r["coverage_at_boss"] for r in rows)
+
+    for profile in PROFILES:
+        by_deductible = [arrival(d, profile) for d in ("low", "standard", "high")]
+        check(f"{profile}: boss-door Coverage falls as the deductible rises",
+              all(a >= b - 0.005 for a, b in zip(by_deductible, by_deductible[1:])),
+              " > ".join(f"{a:.0%}" for a in by_deductible))
+    for deductible in DEDUCTIBLES:
+        careful, reckless = arrival(deductible, "careful"), arrival(deductible, "reckless")
+        check(f"{deductible}: careful play arrives healthier than reckless",
+              careful >= reckless - 0.005, f"{careful:.0%} vs {reckless:.0%}")
+    # The old assertion here measured the spread in boss-door Coverage. That
+    # stopped meaning anything when the Claim Map started guaranteeing a free
+    # Salvage Yard immediately before every boss: everyone now arrives topped
+    # up, by design, and the spread measures the rest rather than the run.
+    # What separates the deductibles over 18 sites is whether you finish.
+    completion = [1.0 - rate[(d, p)] for d in ("low", "standard", "high")
+                  for p in ("careful", "reckless")]
+    check("the difficulty ladder is ordered by completion rate",
+          all(a >= b - 0.03 for a, b in zip(completion, completion[1:])),
+          " > ".join(f"{c:.0%}" for c in completion))
+    check("the ladder spans at least 50 points of completion rate",
+          completion[0] - completion[-1] >= 0.50,
+          f"{(completion[0] - completion[-1]) * 100:.0f} points")
     for profile in PROFILES:
         rates = {k: rate[(k, profile)] for k in DEDUCTIBLES}
         check(f"{profile}: deductible difficulty is ordered low<standard<high",

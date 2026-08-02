@@ -17,10 +17,10 @@ const STRIP_PREMIUMS := 55
 const STRIP_RISK := 0.08
 
 ## Shop prices by rarity index (common, uncommon, rare).
-const CARD_PRICES := [70, 125, 195]
+const CARD_PRICES := [88, 150, 238]
 const PATCH_COST := 55
 const PATCH_HEAL := 45
-const UMBRELLA_COST := 90
+const UMBRELLA_COST := 95
 const EXCLUSION_REMOVAL_COST := 110
 
 
@@ -59,29 +59,34 @@ static func _salvage() -> Dictionary:
 	}
 
 
+## Shop prices scale with the policy: a deductible that earns less pays less.
+static func price(base: int) -> int:
+	return maxi(int(round(float(base) * GameManager.shop_price_factor())), 1)
+
+
 static func _office(rng: RandomNumberGenerator) -> Dictionary:
 	var options: Array = []
 	for card in CardDb.draw_offers(2, GameManager.held_cards, GameManager.risk, rng):
-		var price := int(CARD_PRICES[clampi(card.rarity, 0, CARD_PRICES.size() - 1)])
+		var card_price := price(int(CARD_PRICES[clampi(card.rarity, 0, CARD_PRICES.size() - 1)]))
 		options.append({
 			"label": card.title.to_upper(),
 			"detail": "%s\n%s · %s" % [card.text, card.category.to_upper(), card.rarity_name()],
-			"cost": price,
+			"cost": card_price,
 			"effect": {"kind": "card", "value": card.id}})
 	options.append({
 		"label": "COVERAGE PATCH",
 		"detail": "Restore %d Coverage. Adhesive, mostly." % PATCH_HEAL,
-		"cost": PATCH_COST, "effect": {"kind": "heal", "value": PATCH_HEAL}})
+		"cost": price(PATCH_COST), "effect": {"kind": "heal", "value": PATCH_HEAL}})
 	if not GameManager.umbrella_active:
 		options.append({
 			"label": "UMBRELLA COVERAGE",
 			"detail": "Blocks the next hit outright. Sold as-is.",
-			"cost": UMBRELLA_COST, "effect": {"kind": "umbrella"}})
+			"cost": price(UMBRELLA_COST), "effect": {"kind": "umbrella"}})
 	if GameManager.exclusion_count() > 0:
 		options.append({
 			"label": "BUY OUT AN EXCLUSION",
 			"detail": "Remove one Exclusion from your policy. The adjuster does not make eye contact.",
-			"cost": EXCLUSION_REMOVAL_COST, "effect": {"kind": "remove_exclusion"}})
+			"cost": price(EXCLUSION_REMOVAL_COST), "effect": {"kind": "remove_exclusion"}})
 	return {
 		"title": "ADJUSTER'S OFFICE",
 		"prose": "A folding table, a laminated price list, and a man who has "

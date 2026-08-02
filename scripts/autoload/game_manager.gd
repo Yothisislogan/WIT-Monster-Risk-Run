@@ -7,6 +7,17 @@ const BASE_COVERAGE := 100
 const MAX_ABILITY_ENERGY := 100.0
 ## Coverage fraction at or below which the HUD and audio warn you.
 const LOW_COVERAGE_RATIO := 0.3
+## Risk added by clearing a site without topping up. Tuned against run length,
+## not vibes: at 0.06 over the Claim Map's 18 sites a cautious player still
+## ends pinned at maximum Risk, which scales every peril and turns the back
+## half of a run into a spiral. tools/check_economy.py measures the result.
+const RISK_PER_UNHEALED_SITE := 0.035
+## Coverage restored by consuming a weakened peril, before card modifiers.
+const MUNCH_HEAL := 14
+## Closing out an act releases some of it. Thematically the claim is settled;
+## mechanically it is the pressure valve that stops Risk from being a ratchet.
+const RISK_RELIEF_PER_BOSS := 0.09
+
 ## Chaining takedowns builds an "Adjuster's Streak": more Premiums per kill,
 ## and it drops the moment you take a hit. Reckless play pays (§11).
 const COMBO_WINDOW := 3.0
@@ -18,19 +29,19 @@ const DEDUCTIBLES := {
 		"label": "LOW DEDUCTIBLE",
 		"blurb": "More Coverage, gentler perils, smaller payouts.",
 		"coverage": 130, "damage_taken": 0.8, "premium": 0.8, "risk": 0.0,
-		"healing": 1.25,
+		"healing": 1.25, "shop_price": 0.75,
 	},
 	"standard": {
 		"label": "STANDARD DEDUCTIBLE",
 		"blurb": "The policy exactly as written.",
 		"coverage": 100, "damage_taken": 1.0, "premium": 1.0, "risk": 0.1,
-		"healing": 1.0,
+		"healing": 1.0, "shop_price": 1.0,
 	},
 	"high": {
 		"label": "HIGH DEDUCTIBLE",
 		"blurb": "Thin Coverage, angrier perils, far better cards.",
 		"coverage": 70, "damage_taken": 1.25, "premium": 1.6, "risk": 0.35,
-		"healing": 0.7,
+		"healing": 0.7, "shop_price": 1.1,
 	},
 }
 
@@ -248,6 +259,13 @@ func damage_taken_factor() -> float:
 	return float(DEDUCTIBLES[deductible]["damage_taken"])
 
 
+## The counterpart to premium_factor(): a policy that earns 0.8x should not
+## also pay list price. Without this, Low Deductible cannot afford the shop
+## over a full run, which is the opposite of what "gentler" is meant to mean.
+func shop_price_factor() -> float:
+	return float(DEDUCTIBLES[deductible].get("shop_price", 1.0))
+
+
 # --- Run lifecycle ---------------------------------------------------------
 
 func start_new_run(chosen_deductible: String = "standard") -> void:
@@ -372,7 +390,7 @@ func complete_room() -> void:
 	Sfx.play("room_clear")
 	# Clearing a site without topping up is a gamble, and the meter notices.
 	if not _healed_this_room:
-		add_risk(0.06)
+		add_risk(RISK_PER_UNHEALED_SITE)
 	Events.room_completed.emit(current_room_path())
 	var was_final := is_final_room()
 	map.complete_current()
@@ -522,6 +540,7 @@ func grant_umbrella() -> void:
 
 func record_boss_defeated() -> void:
 	bosses_defeated += 1
+	add_risk(-RISK_RELIEF_PER_BOSS)
 
 
 func record_enemy_defeated() -> void:
@@ -532,9 +551,14 @@ func record_enemy_defeated() -> void:
 
 ## Monster Munch (§7): consuming a weakened enemy restores Coverage and
 ## charges the boss ability meter.
+##
+## This is the only healing source that scales with how long a run is, which
+## is why it carries the Claim Map's 18 sites where a fixed per-room medkit
+## budget could not. It also means the answer to attrition is to engage rather
+## than to retreat, which is the game §7 wants this to be.
 func record_enemy_consumed() -> void:
 	stats["enemies_consumed"] = int(stats["enemies_consumed"]) + 1
-	heal(10 + int(stat("munch_heal")))
+	heal(MUNCH_HEAL + int(stat("munch_heal")))
 	add_ability_energy(25.0)
 	bump_combo()
 
