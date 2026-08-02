@@ -1,11 +1,16 @@
 extends CanvasLayer
-## Touch control layer. Visible only on touch devices; desktop and
-## controller players never see it. Opacity comes from saved settings so
-## players can tune it later (GAME_DESIGN.md §6, §22).
+## Touch control layer. Visible only on touch devices; desktop and controller
+## players never see it (GAME_DESIGN.md §6, §22).
+##
+## There are no buttons any more. The left 46% of the screen is a floating
+## movement stick that anchors wherever the thumb lands, and the right side is
+## a gesture surface — see scripts/ui/gesture_controls.gd for the mapping.
+## Seven buttons used to sit on top of a landscape playfield; now nothing does
+## except a stick that only draws while it is being held.
 
 @onready var root: Control = $Root
-@onready var cycle_button: Control = $Root/CycleButton
-@onready var pause_button: Control = $Root/PauseButton
+@onready var stick: Control = $Root/VirtualStick
+@onready var gestures: Control = $Root/GestureArea
 
 ## Anchors and offsets exactly as authored. Left-handed play mirrors these
 ## rather than the current values, so re-applying settings cannot flip an
@@ -16,37 +21,28 @@ var _paused: bool = false
 
 func _ready() -> void:
 	visible = DisplayServer.is_touchscreen_available()
-	# Touch input must survive the pause, or the pause button is the one
-	# control you cannot use once you have used it.
+	# Touch input must survive the pause, or the two-finger pause gesture is
+	# the one control you cannot use once you have used it.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_capture_base_layout()
 	Settings.changed.connect(_on_setting_changed)
 	_apply_settings()
-	# The swap button only earns its screen space once there is a second
-	# ability to swap to (§14).
-	Events.ability_granted.connect(func(_id: String) -> void: _refresh_cycle_button())
-	Events.run_started.connect(_refresh_cycle_button)
-	_refresh_cycle_button()
 
 
-func _refresh_cycle_button() -> void:
-	cycle_button.visible = GameManager.abilities.size() > 1 and not _paused
-
-
-## Gameplay controls go away while the game is paused. That is not only tidy:
+## Controls go away while the game is paused. That is not only tidy:
 ## Input.action_press latches until something releases it, and the auto-pause
 ## on focus-out (GameManager._notification) fires while a thumb is still down.
-## Hiding them trips the visibility guard in virtual_button/virtual_stick,
-## which releases the action instead of leaving it held through the resume.
+## Hiding them trips the visibility guards in virtual_stick and
+## gesture_controls, which release rather than leaving an action held through
+## the resume.
 func _process(_delta: float) -> void:
 	var paused := get_tree().paused
 	if paused == _paused:
 		return
 	_paused = paused
-	for child in root.get_children():
-		if child is Control and child != pause_button:
-			(child as Control).visible = not paused
-	_refresh_cycle_button()
+	stick.visible = not paused
+	# The gesture surface stays live so a second two-finger tap un-pauses.
+	gestures.visible = true
 
 
 func _capture_base_layout() -> void:
@@ -66,21 +62,20 @@ func _on_setting_changed(key: String, _value: Variant) -> void:
 		_apply_settings()
 
 
-## Size, opacity and handedness are all §22 requirements.
+## Opacity, size and handedness are all §22 requirements. With the buttons
+## gone, scale no longer has anything to resize — the stick sizes itself to the
+## thumb — so only opacity and handedness still do work here.
 func _apply_settings() -> void:
 	root.modulate.a = clampf(float(Settings.get_value("control_opacity")), 0.15, 1.0)
-	var scale_factor := clampf(float(Settings.get_value("control_scale")), 0.6, 1.6)
 	var mirrored := bool(Settings.get_value("left_handed"))
 	for child in root.get_children():
 		if not child is Control:
 			continue
 		var control: Control = child
-		control.scale = Vector2(scale_factor, scale_factor)
-		control.pivot_offset = control.size * 0.5
 		var base: Dictionary = _base_layout.get(control.name, {})
 		if base.is_empty():
 			continue
-		# Left-handed play mirrors the stick and the buttons across the screen.
+		# Left-handed play swaps which side moves and which side acts.
 		if mirrored:
 			control.anchor_left = 1.0 - float(base["anchor_right"])
 			control.anchor_right = 1.0 - float(base["anchor_left"])

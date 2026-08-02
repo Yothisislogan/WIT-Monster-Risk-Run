@@ -24,10 +24,24 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
 
+## Defaults that depend on the device rather than on taste. A player who has
+## explicitly set the option always wins over these.
+func _device_default(key: String) -> Variant:
+	if key == "auto_fire" and DisplayServer.is_touchscreen_available():
+		# Touch has no tap-to-shoot gesture — a tap jumps and a hold charges —
+		# so the basic weapon looks after itself there. Desktop, which has a
+		# dedicated attack key, keeps manual fire.
+		return true
+	return null
+
+
 func get_value(key: String, fallback: Variant = null) -> Variant:
 	var settings: Dictionary = SaveManager.get_section("settings")
 	if settings.has(key):
 		return settings[key]
+	var device := _device_default(key)
+	if device != null:
+		return device
 	if fallback != null:
 		return fallback
 	return DEFAULTS.get(key, null)

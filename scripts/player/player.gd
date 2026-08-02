@@ -24,6 +24,11 @@ extends CharacterBody2D
 @export var double_jump_velocity: float = -580.0
 @export var max_air_jumps: int = 1
 @export var jump_cut_multiplier: float = 0.45
+## Variable jump height is only meant to reward *deliberately* letting go. A
+## release inside this window is a tap, not a decision, and cutting it turns a
+## tap into a hop — which is what a gesture jump is, and what a brisk keyboard
+## tap is too.
+@export var jump_cut_min_hold: float = 0.12
 ## Asymmetric gravity: float up, fall fast. Reads snappy instead of moon-like.
 @export var rise_gravity: float = 1500.0
 @export var fall_gravity: float = 2100.0
@@ -140,6 +145,8 @@ var base_sprite_scale: Vector2 = Vector2.ONE
 var _squash: Vector2 = Vector2.ONE
 var _was_on_floor: bool = true
 var _fall_speed: float = 0.0
+## How long the jump input has been held, for jump_cut_min_hold.
+var _jump_held_time: float = 0.0
 
 
 var auto_fire: bool = false
@@ -212,6 +219,7 @@ func _update_timers(delta: float) -> void:
 	dash_cooldown_timer = maxf(dash_cooldown_timer - delta, 0.0)
 	fire_timer = maxf(fire_timer - delta, 0.0)
 	invulnerability_timer = maxf(invulnerability_timer - delta, 0.0)
+	_jump_held_time = _jump_held_time + delta if Input.is_action_pressed("jump") else 0.0
 
 
 func _read_action_buffers() -> void:
@@ -233,8 +241,10 @@ func _apply_gravity(delta: float) -> void:
 		if absf(velocity.y) < apex_threshold:
 			g *= apex_gravity_scale
 		velocity.y = minf(velocity.y + g * delta, max_fall_speed)
-	# Variable jump height: releasing jump early cuts upward velocity.
-	if velocity.y < 0.0 and Input.is_action_just_released("jump"):
+	# Variable jump height: releasing jump early cuts upward velocity, but only
+	# once the press has lasted long enough to have been meant.
+	if velocity.y < 0.0 and Input.is_action_just_released("jump") \
+			and _jump_held_time >= jump_cut_min_hold:
 		velocity.y *= jump_cut_multiplier
 
 
@@ -358,11 +368,14 @@ func _process_dash(delta: float) -> void:
 		velocity.x = facing * move_speed
 
 
-## Ground pound: hold down and press jump while airborne (§7 belly bounce).
+## Ground pound: hold down and press jump while airborne (§7 belly bounce), or
+## the dedicated `pound` action, which is what a swipe down fires on touch —
+## a gesture layer should not have to synthesise a two-key combo.
 func _try_pound() -> void:
-	if is_on_floor() or jump_buffer_timer <= 0.0:
+	if is_on_floor():
 		return
-	if not Input.is_action_pressed("move_down"):
+	var combo := jump_buffer_timer > 0.0 and Input.is_action_pressed("move_down")
+	if not combo and not Input.is_action_just_pressed("pound"):
 		return
 	pounding = true
 	pound_hang_timer = pound_hang_time

@@ -40,8 +40,10 @@ Phase 2/3 systems:
 - One temporary upgrade pickup (Umbrella Coverage — blocks one hit)
 - Save and resume after every completed site (versioned JSON save; the map is
   rebuilt from its seed so a save from an older build still opens)
-- Touch controls (floating virtual stick + action buttons) and controller/keyboard
-  through the same input action layer
+- **Gesture touch controls**: no on-screen buttons at all. The left of the
+  screen is a floating stick that only draws while a thumb is on it; the right
+  is a gesture surface — tap to jump, swipe to dash or unleash, hold to charge,
+  two fingers to pause
 - Auto-pause on focus loss / app backgrounding
 - **8-bit chiptune soundtrack**: a distinct theme per Risk Zone plus a victory
   cue, crossfaded between rooms
@@ -87,7 +89,26 @@ Phase 2/3 systems:
 Every pause overlay, the card offer, the Claim Map and the Headquarters screen
 hand focus to a control, so the whole game is playable on a pad.
 
-On touch devices the virtual controls appear automatically; on desktop they stay hidden.
+### Touch gestures
+
+There are no on-screen buttons. Buttons cost the thing a phone has least of,
+and on a landscape platformer they sit exactly where the action is.
+
+| Gesture (right of screen) | Action |
+| --- | --- |
+| Tap | Jump — tap again in mid-air to double jump |
+| Swipe ← / → | Dash that way, regardless of facing |
+| Swipe ↑ | Equipped boss ability |
+| Swipe ↓ | Ground pound in the air; Monster Munch on the ground |
+| Hold | Charge a shot, released when you lift |
+| Two-finger tap | Pause |
+
+The left of the screen is a floating movement stick that anchors wherever your
+thumb lands and only draws while held. Tapping the ability readout in the HUD
+swaps which ability SPECIAL fires. Auto-fire is the default on touch, because a
+hold means "charge" there and the basic weapon needs no gesture of its own.
+
+On desktop and controller the touch layer stays hidden entirely.
 
 ## Project layout
 
@@ -151,6 +172,7 @@ python3 tools/check_references.py    # autoload/class members actually exist
 python3 tools/check_scenes.py        # .tscn structure, $Node and %Unique paths, connections
 python3 tools/check_signals.py       # every Events emit and handler matches its declaration
 python3 tools/check_inputs.py        # every input action referenced is declared
+python3 tools/check_gestures.py      # gesture thresholds cannot overlap
 python3 tools/check_movement.py      # the air-jump budget cannot be exceeded
 python3 tools/check_aim.py           # aim assist stays mild; the flyer is hittable
 python3 tools/check_map.py           # 4000 Claim Maps: connected, no dead ends, paced

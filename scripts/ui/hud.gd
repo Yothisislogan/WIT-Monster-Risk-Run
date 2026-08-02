@@ -82,6 +82,19 @@ func _ready() -> void:
 		_hint("munch", "Green perils are weakened — MUNCH to eat one and heal"))
 	music_button.pressed.connect(_on_music_pressed)
 	_refresh_music_button()
+	# With the touch buttons gone, the ability readout is where you swap
+	# abilities: tap the thing that tells you what is equipped. It only becomes
+	# interactive once there is a second ability to swap to.
+	ability_label.gui_input.connect(_on_ability_label_input)
+	ability_label.mouse_filter = Control.MOUSE_FILTER_STOP
+
+
+func _on_ability_label_input(event: InputEvent) -> void:
+	if GameManager.abilities.size() < 2:
+		return
+	var tapped := event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed
+	if tapped or event.is_action_pressed("ui_accept"):
+		GameManager.cycle_ability()
 
 
 func _on_music_pressed() -> void:
@@ -296,7 +309,12 @@ func _on_room_started(path: String) -> void:
 	banner_sub.text = String(entry.get("subtitle", ""))
 	var progress := GameManager.route_progress()
 	banner_room.text = "SITE %d / %d" % [progress.x, progress.y]
-	_hint("double_jump", "Tap JUMP again in mid-air to double jump")
+	if DisplayServer.is_touchscreen_available():
+		_hint("gestures", "TAP to jump  ·  SWIPE ← → to dash  ·  SWIPE ↑ for your ability\n"
+				+ "SWIPE ↓ to pound in the air, or eat a weakened peril on the ground\n"
+				+ "HOLD to charge a shot  ·  TWO FINGERS to pause")
+	else:
+		_hint("double_jump", "Tap JUMP again in mid-air to double jump")
 	if _banner_tween != null and _banner_tween.is_valid():
 		_banner_tween.kill()
 	banner.modulate.a = 0.0

@@ -69,6 +69,6 @@ func _draw() -> void:
 	if _touch_index == -1:
 		return
 	var local_origin := _origin - global_position
-	draw_circle(local_origin, stick_radius, Color(1, 1, 1, 0.08))
-	draw_arc(local_origin, stick_radius, 0.0, TAU, 48, Color(1, 1, 1, 0.25), 2.0)
-	draw_circle(local_origin + _vector * stick_radius * 0.6, 34.0, Color(0.12, 0.48, 0.88, 0.6))
+	draw_arc(local_origin, stick_radius, 0.0, TAU, 40, Color(1, 1, 1, 0.16), 2.0)
+	draw_circle(local_origin + _vector * stick_radius * 0.6, 30.0,
+			Color(0.12, 0.48, 0.88, 0.45))
