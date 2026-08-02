@@ -24,11 +24,15 @@ Prefer binding a checker to the GDScript constants rather than restating them.
 A "keep these in sync by hand" note is how the Risk damping curve came to exist
 in the model and not in the game.
 
+One more thing only CI can do: `godot --headless --import` in the build job is
+the single place a `.gd` file is ever *parsed*. Everything in `tools/` reads
+source as text. A green local run does not mean the game loads.
+
 Run them all before committing:
 
 ```
-for t in references scenes signals inputs movement aim map sites meta \
-         reachability pickups economy; do python3 tools/check_$t.py || break; done
+for t in references scenes signals inputs gestures movement aim map sites \
+         meta reachability pickups economy; do python3 tools/check_$t.py || break; done
 ```
 
 ## Architecture rules the codebase actually follows
