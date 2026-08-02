@@ -37,9 +37,11 @@ const PATCH_HEAL := 45
 @onready var hint_label: Label = %HintLabel
 @onready var inventory_label: Label = %InventoryLabel
 @onready var quit_button: Button = %QuitButton
+@onready var fade: ColorRect = %Fade
 
 var _banner_tween: Tween
 var _rng := RandomNumberGenerator.new()
+var _arrow_pool: Array[Polygon2D] = []
 
 
 func _ready() -> void:
@@ -53,6 +55,7 @@ func _ready() -> void:
 	Events.ability_energy_changed.connect(_on_ability_energy_changed)
 	Events.combo_changed.connect(_on_combo_changed)
 	_rng.randomize()
+	_build_danger_arrows()
 	Events.risk_changed.connect(_on_risk_changed)
 	Events.boss_spawned.connect(_on_boss_spawned)
 	Events.boss_health_changed.connect(_on_boss_health_changed)
@@ -85,6 +88,7 @@ func _refresh_music_button() -> void:
 
 func _process(_delta: float) -> void:
 	# The card picker also pauses, so do not stack the two overlays.
+	_update_danger_arrows()
 	var show_pause := get_tree().paused and not card_panel.visible
 	if show_pause and not pause_panel.visible:
 		_refresh_inventory()
@@ -187,6 +191,10 @@ func _on_ability_energy_changed(current: float, maximum: float) -> void:
 
 ## Room-entry banner: names the Risk Zone, then gets out of the way fast.
 func _on_room_started(path: String) -> void:
+	# Fade up from black so a room swap reads as a cut, not a pop.
+	fade.color.a = 1.0
+	var fade_tween := create_tween()
+	fade_tween.tween_property(fade, "color:a", 0.0, 0.35)
 	boss_box.visible = false
 	var entry := LevelData.entry(path)
 	banner_name.text = String(entry.get("name", "UNSURVEYED RISK"))
@@ -337,3 +345,52 @@ func _format_report(report: Dictionary) -> String:
 		"",
 		"CLAIM STATUS:  %s" % prose["status"],
 	])
+
+
+## --- Off-screen danger indicators (§17) ------------------------------------
+## Arrows at the screen edge for perils you cannot see yet. Without these,
+## an Ember Imp diving from off-camera reads as an unfair hit.
+func _update_danger_arrows() -> void:
+	if _arrow_pool.is_empty():
+		return
+	var camera := get_viewport().get_camera_2d()
+	if camera == null or not GameManager.run_active:
+		for arrow in _arrow_pool:
+			arrow.visible = false
+		return
+	var centre := camera.get_screen_center_position()
+	var size := get_viewport_rect().size
+	var margin := 46.0
+	var index := 0
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if index >= _arrow_pool.size():
+			break
+		if not is_instance_valid(enemy):
+			continue
+		var offset: Vector2 = enemy.global_position - centre
+		# Only flag things that are genuinely off screen but still close by.
+		if absf(offset.x) < size.x * 0.5 and absf(offset.y) < size.y * 0.5:
+			continue
+		if offset.length() > 900.0:
+			continue
+		var arrow: Polygon2D = _arrow_pool[index]
+		index += 1
+		var edge := Vector2(
+			clampf(offset.x, -size.x * 0.5 + margin, size.x * 0.5 - margin),
+			clampf(offset.y, -size.y * 0.5 + margin, size.y * 0.5 - margin))
+		arrow.position = size * 0.5 + edge
+		arrow.rotation = offset.angle()
+		arrow.visible = true
+	for i in range(index, _arrow_pool.size()):
+		_arrow_pool[i].visible = false
+
+
+func _build_danger_arrows() -> void:
+	for i in 6:
+		var arrow := Polygon2D.new()
+		arrow.polygon = PackedVector2Array([
+			Vector2(14, 0), Vector2(-8, -9), Vector2(-3, 0), Vector2(-8, 9)])
+		arrow.color = Color(1.0, 0.4, 0.35, 0.85)
+		arrow.visible = false
+		$Root.add_child(arrow)
+		_arrow_pool.append(arrow)

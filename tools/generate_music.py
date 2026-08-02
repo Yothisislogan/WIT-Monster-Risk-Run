@@ -300,6 +300,22 @@ TRACKS = {
             "D5:2 F#5:2 A5:2 D6:2 F#6:8           A5:4 F#5:2 D5:2 A5:8 "
             "G5:2 B5:2 D6:2 G6:2 D6:2 B5:2 G5:4   B5:4 D6:4 G6:8"
         )),
+    # Boss theme (§21: every level needs one). Fastest, darkest, relentless.
+    "boss_theme": dict(
+        bpm=172, lead_duty=0.25, arp_duty=0.125, arp_vol=0.18, bass_vol=0.65,
+        lead_vol=0.62,
+        progression=[("D3", "i", 2), ("Bb3", "VI", 2), ("C3", "VII", 2), ("A3", "V", 2),
+                     ("D3", "i", 2), ("G3", "iv", 2), ("Bb3", "VI", 2), ("A3", "V", 2)],
+        melody=(
+            "D5:2 A5:2 F5:2 D5:2 A4:2 D5:2 F5:4   E5:2 F5:2 E5:2 D5:2 A4:8 "
+            "Bb4:2 F5:2 D5:2 Bb4:2 F4:2 Bb4:2 D5:4  C5:2 D5:2 C5:2 Bb4:2 F4:8 "
+            "C5:2 G5:2 E5:2 C5:2 G4:2 C5:2 E5:4   D5:2 E5:2 D5:2 C5:2 G4:8 "
+            "A4:2 E5:2 C#5:2 A4:2 E5:2 A5:2 C#6:4  A5:2 G5:2 F5:2 E5:2 A5:8 "
+            "D6:4 C6:2 Bb5:2 A5:4 F5:4            D5:2 F5:2 A5:2 D6:2 F6:8 "
+            "G5:4 F5:2 E5:2 D5:4 Bb4:4            G4:2 Bb4:2 D5:2 G5:2 Bb5:8 "
+            "Bb5:4 A5:2 G5:2 F5:4 D5:4            Bb4:2 D5:2 F5:2 Bb5:2 D6:8 "
+            "A5:2 C#6:2 E6:4 D6:2 C#6:2 A5:4      A5:2 E5:2 C#5:2 A4:4 E5:2 A5:2"
+        )),
     # Short cue for the end-of-run claim report (§21 victory cue).
     "claim_victory": dict(
         bpm=150, lead_duty=0.5, arp_vol=0.14, arp_duty=0.25,

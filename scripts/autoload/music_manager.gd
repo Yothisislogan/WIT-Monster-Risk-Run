@@ -8,6 +8,10 @@ extends Node
 const MUSIC_DIR := "res://assets/audio/music/"
 const FADE_TIME := 0.7
 const SILENT_DB := -60.0
+## At high Risk the track plays a touch sharp and faster. It is the cheapest
+## honest way to get §21's "high-risk variation" without five more tracks.
+const HIGH_RISK_THRESHOLD := 0.5
+const HIGH_RISK_PITCH := 1.06
 
 const VICTORY_CUE := "claim_victory"
 
@@ -35,11 +39,18 @@ func _ready() -> void:
 	enabled = bool(settings.get("music_enabled", true))
 
 	Events.room_started.connect(_on_room_started)
+	Events.risk_changed.connect(_on_risk_changed)
 	Events.run_ended.connect(_on_run_ended)
 
 
 func _on_room_started(path: String) -> void:
 	play(String(LevelData.entry(path).get("music", "blaze_borough")))
+
+
+func _on_risk_changed(value: float) -> void:
+	var pitch := HIGH_RISK_PITCH if value >= HIGH_RISK_THRESHOLD else 1.0
+	for player in _players:
+		player.pitch_scale = pitch
 
 
 func _on_run_ended(_report: Dictionary) -> void:
@@ -59,6 +70,7 @@ func play(track: String, loop: bool = true) -> void:
 	_active = 1 - _active
 
 	incoming.stream = stream
+	incoming.pitch_scale = HIGH_RISK_PITCH if GameManager.risk >= HIGH_RISK_THRESHOLD else 1.0
 	incoming.volume_db = SILENT_DB
 	incoming.play()
 
