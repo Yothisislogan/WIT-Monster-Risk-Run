@@ -18,12 +18,19 @@ Phase 2/3 systems:
   hit ends the streak
 - Monster Munch: weakened enemies (tinted green) can be consumed to restore
   Coverage and charge the boss ability meter
-- Flame Draft boss ability: spends ability energy to fire a piercing blast
-  that ignites enemies (burn damage over time)
+- **Boss abilities and combinations**: Flame Draft (a piercing blast that
+  ignites) and Impact Dash (an armoured charge), absorbed from bosses and kept
+  permanently. Hold both and MELTDOWN CHARGE makes the dash ignite
+- **Aiming**: hold up, or down in mid-air, to angle a shot; otherwise a capped
+  assist leans it toward the nearest peril inside a forward cone
 - Coverage meter and boss ability meter HUD
 - One hazard (Heat Vent) with a telegraphed warn-then-burst cycle
-- Three handcrafted room modules shuffled into a randomized sequence each run,
-  each with an optional double-jump-only treasure route
+- **The Claim Map**: a branching run of three acts and 18 sites, generated from
+  a seed and saved with the run. Route choice is risk selection — Peril Zones,
+  High-Risk Zones, the Adjuster's Office, Claim Events, Senior Adjusters and a
+  guaranteed Salvage Yard before each act's Catastrophe
+- Five handcrafted room modules dealt per act without replacement, each with an
+  optional double-jump-only treasure route
 - Bounce pads (ground pound them for a super launch), breakable crates,
   Premium coin pickups with magnet collection, and moving platforms
 - Two enemy types: Toaster Trooper (patrol) and Ember Imp (flying, telegraphed
@@ -31,8 +38,8 @@ Phase 2/3 systems:
 - Falling in a pit costs Coverage and drops you back on solid ground instead
   of ending the run
 - One temporary upgrade pickup (Umbrella Coverage — blocks one hit)
-- Save and resume after every completed room (versioned JSON save; the shuffled
-  room sequence is saved so resuming never re-rolls a room)
+- Save and resume after every completed site (versioned JSON save; the map is
+  rebuilt from its seed so a save from an older build still opens)
 - Touch controls (floating virtual stick + action buttons) and controller/keyboard
   through the same input action layer
 - Auto-pause on focus loss / app backgrounding
@@ -45,7 +52,13 @@ Phase 2/3 systems:
 - **Risk Meter**: rises with reckless choices, scales enemies and payouts, and
   spawns elite perils
 - **Deductibles**: Low / Standard / High chosen at run start
-- **Inferno Adjuster boss** with three telegraphed attacks and punish windows
+- **Two bosses**, deliberately opposite fights: the Inferno Adjuster is a
+  ground bruiser you punish by stomping a stunned body; the Actuary never
+  lands, and its beam, falling liabilities and outward rings all ask where you
+  are in the air
+- **WIT Headquarters**: Case Files earned every run, won or lost, spent on
+  permanent upgrades — most of which unlock cards and Exclusions into the pool
+  rather than raising a number. Twelve named Case Files to earn
 - Title screen, settings covering the §22 accessibility options, one-time
   contextual hints, a pause inventory, and save-and-quit
 
@@ -69,6 +82,10 @@ Phase 2/3 systems:
 | Munch   | E                 | Right shoulder    |
 | Pound   | Down + Jump (in air) | Down + A       |
 | Pause   | Esc               | Start             |
+| Swap ability | Tab          | Left shoulder     |
+
+Every pause overlay, the card offer, the Claim Map and the Headquarters screen
+hand focus to a control, so the whole game is playable on a pad.
 
 On touch devices the virtual controls appear automatically; on desktop they stay hidden.
 
@@ -85,7 +102,10 @@ scripts/
   enemies/          Enemy base class + concrete enemies
   hazards/          Environmental hazards
   rooms/            Room base, pickups
-  ui/               HUD, touch controls
+  map/              Claim Map generation and traversal
+  sites/            Shop, rest and Claim Event content
+  meta/             WIT Headquarters and Case Files
+  ui/               HUD, touch controls, map screen, site panel
 assets/             Art and audio (placeholders during prototyping)
 ```
 
@@ -103,7 +123,9 @@ own key, tempo and character:
 | `storm_surge_harbor` | 3. Storm Surge Harbor | D minor | 132 | Rolling, moody |
 | `cyber_city` | 4. Cyber City | B minor | 160 | Staccato, glitchy |
 | `liability_land` | 5. Liability Land | C major | 145 | Bouncy, carnival |
+| `boss_theme` | boss encounters | — | 172 | Urgent |
 | `claim_victory` | end-of-run cue | C major | 150 | Short fanfare |
+| `claim_denied` | defeat cue | A minor | 104 | Falling, slower |
 
 Output is 8-bit 22050 Hz mono (~2.8 MB total) — genuinely 8-bit samples, which
 suits the style and halves the web download. Rendering is deterministic, so
@@ -119,17 +141,33 @@ each end lands the loop point on silence so the seam does not click.
 
 ## Checkers
 
-There is no Godot binary in CI beyond the export, so these run as the safety
-net. Keep all three green:
+There is no Godot binary in this environment and none in CI beyond the export
+step, so nothing here can be playtested or even compiled locally. These run
+instead, on every push, and every one of them was verified by deliberately
+reintroducing the bug it is meant to catch:
 
 ```
-python3 tools/check_reachability.py   # every room: spawn -> exit is traversable
-python3 tools/check_pickups.py        # coin physics regression
-python3 tools/check_references.py     # autoload/class members actually exist
+python3 tools/check_references.py    # autoload/class members actually exist
+python3 tools/check_scenes.py        # .tscn structure, $Node and %Unique paths, connections
+python3 tools/check_signals.py       # every Events emit and handler matches its declaration
+python3 tools/check_inputs.py        # every input action referenced is declared
+python3 tools/check_movement.py      # the air-jump budget cannot be exceeded
+python3 tools/check_aim.py           # aim assist stays mild; the flyer is hittable
+python3 tools/check_map.py           # 4000 Claim Maps: connected, no dead ends, paced
+python3 tools/check_sites.py         # every site option is complete and does something
+python3 tools/check_meta.py          # Headquarters pays out without power creep
+python3 tools/check_reachability.py  # every room: spawn -> exit is traversable
+python3 tools/check_pickups.py       # coin physics regression
+python3 tools/check_economy.py       # Monte Carlo of the Risk/reward economy
 ```
 
-`check_references.py` catches the failure Godot only reports at runtime: a
-typo'd autoload method deep inside a scene.
+The pattern is that each one models a rule the game is meant to obey and
+asserts a property of it, rather than restating the code. `check_map.py`
+generates four thousand maps because a seed that produces a dead end makes a
+run unfinishable, which is the worst possible bug to find by playing.
+`check_economy.py` simulates full runs across every deductible and two skill
+profiles; when the run length tripled it was what showed the death rate going
+from 18% to 99%.
 
 ## Movement budget (level design contract)
 
