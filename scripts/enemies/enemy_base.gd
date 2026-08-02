@@ -28,6 +28,8 @@ var _health_bg: Polygon2D
 
 
 func _ready() -> void:
+	# Perils scale with the Risk Meter (§11), applied once at spawn.
+	max_health = maxi(int(round(float(max_health) * GameManager.enemy_health_factor())), 1)
 	health = max_health
 	hitbox.body_entered.connect(_on_hitbox_body_entered)
 	# Pause processing while off screen (§30).

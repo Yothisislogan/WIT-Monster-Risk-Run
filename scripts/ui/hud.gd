@@ -24,7 +24,13 @@ signal restart_requested
 @onready var banner_sub: Label = %BannerSub
 @onready var banner_room: Label = %BannerRoom
 
+@onready var risk_bar: ProgressBar = %RiskBar
+@onready var risk_label: Label = %RiskLabel
+@onready var card_panel: PanelContainer = %CardPanel
+@onready var card_row: HBoxContainer = %CardRow
+
 var _banner_tween: Tween
+var _rng := RandomNumberGenerator.new()
 
 
 func _ready() -> void:
@@ -37,6 +43,9 @@ func _ready() -> void:
 	Events.shield_changed.connect(_on_shield_changed)
 	Events.ability_energy_changed.connect(_on_ability_energy_changed)
 	Events.combo_changed.connect(_on_combo_changed)
+	_rng.randomize()
+	Events.risk_changed.connect(_on_risk_changed)
+	Events.cards_offered.connect(_on_cards_offered)
 	Events.room_started.connect(_on_room_started)
 	Events.run_started.connect(_on_run_started)
 	Events.run_ended.connect(_on_run_ended)
@@ -61,10 +70,13 @@ func _refresh_music_button() -> void:
 
 
 func _process(_delta: float) -> void:
-	pause_panel.visible = get_tree().paused
+	# The card picker also pauses, so do not stack the two overlays.
+	pause_panel.visible = get_tree().paused and not card_panel.visible
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if card_panel.visible:
+		return
 	if event.is_action_pressed("pause") and GameManager.run_active:
 		get_tree().paused = not get_tree().paused
 
@@ -138,7 +150,54 @@ func _on_room_started(path: String) -> void:
 	_banner_tween.tween_property(banner, "modulate:a", 0.0, 0.5)
 
 
+func _on_risk_changed(value: float) -> void:
+	risk_bar.value = value
+	risk_label.text = "RISK: %s" % ClaimReport.risk_label(value)
+	risk_label.modulate = Color(1, 1, 1) if value < 0.5 else Color(1, 0.6, 0.6)
+
+
+## Card offer between rooms (§9). Pauses so the choice is unhurried, and the
+## three options are big touch targets rather than a scrolling list (§9, §23).
+func _on_cards_offered(cards: Array) -> void:
+	for child in card_row.get_children():
+		child.queue_free()
+	if cards.is_empty():
+		Events.card_chosen.emit("")
+		return
+	for card in cards:
+		card_row.add_child(_build_card_button(card))
+	card_panel.visible = true
+	get_tree().paused = true
+	Sfx.play("ui_move")
+
+
+func _build_card_button(card: PolicyCard) -> Button:
+	var button := Button.new()
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.custom_minimum_size = Vector2(0, 200)
+	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	button.add_theme_font_size_override("font_size", 17)
+	var lines := [card.title.to_upper(), "", card.text]
+	if card.is_exclusion:
+		lines.append("")
+		lines.append("EXCLUSION — " + card.downside)
+	lines.append("")
+	lines.append("%s · %s" % [card.category.to_upper(), card.rarity_name()])
+	button.text = "\n".join(lines)
+	button.modulate = Color(1.0, 0.72, 0.55) if card.is_exclusion else card.rarity_color()
+	button.pressed.connect(_on_card_picked.bind(card.id))
+	return button
+
+
+func _on_card_picked(card_id: String) -> void:
+	Sfx.play("pickup_card")
+	card_panel.visible = false
+	get_tree().paused = false
+	Events.card_chosen.emit(card_id)
+
+
 func _on_run_started() -> void:
+	card_panel.visible = false
 	claim_panel.visible = false
 
 
@@ -148,25 +207,21 @@ func _on_run_ended(report: Dictionary) -> void:
 
 
 func _format_report(report: Dictionary) -> String:
+	var prose := ClaimReport.compose(report, _rng)
 	return "\n".join([
-		"Cause of loss: %s" % report.get("cause_of_loss", "unknown peril"),
-		"Rooms completed: %d" % report.get("rooms_completed", 0),
-		"Enemies defeated: %d" % report.get("enemies_defeated", 0),
-		"Best streak: x%d" % report.get("best_combo", 0),
-		"Damage taken: %d" % report.get("damage_taken", 0),
-		"Estimated property damage: $%s" % _with_commas(report.get("estimated_property_damage", 0)),
+		"Cause of loss:  %s" % prose["cause"],
+		"Contributing factor:  %s" % prose["factor"],
 		"",
-		"Claim status: %s" % report.get("claim_status", "Under review."),
+		"Policy:  %s" % report.get("deductible", "STANDARD DEDUCTIBLE"),
+		"Final risk assessment:  %s" % ClaimReport.risk_label(report.get("risk", 0.0)),
+		"Rooms surveyed:  %d          Perils neutralised:  %d" % [
+			report.get("rooms_completed", 0), report.get("enemies_defeated", 0)],
+		"Parties consumed:  %d          Best streak:  x%d" % [
+			report.get("enemies_consumed", 0), report.get("best_combo", 0)],
+		"Endorsements held:  %d          Premiums collected:  %d" % [
+			report.get("cards", 0), report.get("premiums_earned", 0)],
+		"Estimated property damage:  $%s" % ClaimReport.money(
+			report.get("estimated_property_damage", 0)),
+		"",
+		"CLAIM STATUS:  %s" % prose["status"],
 	])
-
-
-func _with_commas(value: int) -> String:
-	var text := str(value)
-	var result := ""
-	var count := 0
-	for i in range(text.length() - 1, -1, -1):
-		result = text[i] + result
-		count += 1
-		if count % 3 == 0 and i > 0:
-			result = "," + result
-	return result

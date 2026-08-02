@@ -15,11 +15,14 @@ const PIT_DAMAGE := 12
 var current_room: Room
 var _safe_position: Vector2 = Vector2.ZERO
 var _safe_timer: float = 0.0
+## True while the card picker is up and the next room is waiting on a choice.
+var _awaiting_card: bool = false
 
 
 func _ready() -> void:
 	hud.restart_requested.connect(_on_restart_requested)
 	Events.run_ended.connect(_on_run_ended)
+	Events.card_chosen.connect(_on_card_chosen)
 	if not GameManager.resume_run():
 		GameManager.start_new_run()
 	_load_room(GameManager.current_room_path())
@@ -64,11 +67,30 @@ func _load_room(path: String) -> void:
 	player.apply_camera_bounds(current_room.camera_bounds)
 	_safe_position = current_room.spawn_point.global_position
 	_safe_timer = 0.0
+	GameManager.begin_room()
 	Events.room_started.emit(path)
 
 
 func _on_room_exit_reached() -> void:
 	GameManager.complete_room()
+	if not GameManager.run_active:
+		return
+	# Offer an endorsement before the next room (§9). The HUD pauses while
+	# the choice is open and answers on Events.card_chosen.
+	var offers := GameManager.draw_card_offers(3)
+	if offers.is_empty():
+		_load_room(GameManager.current_room_path())
+		return
+	_awaiting_card = true
+	Events.cards_offered.emit(offers)
+
+
+func _on_card_chosen(card_id: String) -> void:
+	if not _awaiting_card:
+		return
+	_awaiting_card = false
+	if card_id != "":
+		GameManager.add_card(card_id)
 	if GameManager.run_active:
 		_load_room(GameManager.current_room_path())
 
@@ -79,5 +101,6 @@ func _on_run_ended(_report: Dictionary) -> void:
 
 
 func _on_restart_requested() -> void:
-	GameManager.start_new_run()
+	_awaiting_card = false
+	GameManager.start_new_run(GameManager.deductible)
 	_load_room(GameManager.current_room_path())
