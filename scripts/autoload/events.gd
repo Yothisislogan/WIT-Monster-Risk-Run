@@ -12,6 +12,9 @@ signal ability_energy_changed(current: float, maximum: float)
 signal combo_changed(count: int, ratio: float)
 signal risk_changed(value: float)
 
+# Teaching moments — the HUD turns these into one-time hints
+signal enemy_weakened
+
 # Boss encounters
 signal boss_spawned(title: String, max_health: int)
 signal boss_health_changed(current: int, maximum: int)

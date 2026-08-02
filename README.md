@@ -37,7 +37,17 @@ Phase 2/3 systems:
   through the same input action layer
 - Auto-pause on focus loss / app backgrounding
 - **8-bit chiptune soundtrack**: a distinct theme per Risk Zone plus a victory
-  cue, crossfaded between rooms, with a music toggle in the pause menu
+  cue, crossfaded between rooms
+- **24 synthesised sound effects** with a pooled player, retrigger guards and
+  rising-pitch chains for coin runs and stomp streaks
+- **Policy Cards**: a data-driven catalogue of cards and Exclusions, choose one
+  of three after every room
+- **Risk Meter**: rises with reckless choices, scales enemies and payouts, and
+  spawns elite perils
+- **Deductibles**: Low / Standard / High chosen at run start
+- **Inferno Adjuster boss** with three telegraphed attacks and punish windows
+- Title screen, settings covering the §22 accessibility options, one-time
+  contextual hints, a pause inventory, and save-and-quit
 
 ## Getting started
 
@@ -66,6 +76,7 @@ On touch devices the virtual controls appear automatically; on desktop they stay
 
 ```
 docs/               Design documents (GAME_DESIGN.md is the source of truth)
+tools/              Generators and static checkers (see below)
 scenes/             Godot scenes (player, enemies, hazards, rooms, ui)
 scripts/
   autoload/         Singletons: Events (signal bus), GameManager, SaveManager
@@ -105,6 +116,20 @@ python3 tools/generate_music.py
 To change a theme, edit its entry in `TRACKS` (melodies use a compact
 `Note:sixteenths` notation) and re-run. Tracks loop seamlessly: a 4 ms fade at
 each end lands the loop point on silence so the seam does not click.
+
+## Checkers
+
+There is no Godot binary in CI beyond the export, so these run as the safety
+net. Keep all three green:
+
+```
+python3 tools/check_reachability.py   # every room: spawn -> exit is traversable
+python3 tools/check_pickups.py        # coin physics regression
+python3 tools/check_references.py     # autoload/class members actually exist
+```
+
+`check_references.py` catches the failure Godot only reports at runtime: a
+typo'd autoload method deep inside a scene.
 
 ## Movement budget (level design contract)
 

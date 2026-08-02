@@ -114,6 +114,7 @@ func take_damage(amount: int) -> void:
 	elif not weakened and health <= int(max_health * weaken_ratio):
 		weakened = true
 		_refresh_health_bar()
+		Events.enemy_weakened.emit()
 		_on_weakened()
 
 

@@ -1,0 +1,131 @@
+[gd_scene load_steps=4 format=3 uid="uid://wittitle000001"]
+
+[ext_resource type="Script" path="res://scripts/ui/title_screen.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://icon.svg" id="2_icon"]
+[ext_resource type="PackedScene" path="res://scenes/ui/settings_panel.tscn" id="3_settings"]
+
+[node name="TitleScreen" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_script")
+
+[node name="Background" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.07, 0.09, 0.14, 1)
+
+[node name="Monster" type="TextureRect" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 250.0
+offset_top = -110.0
+offset_right = 470.0
+offset_bottom = 110.0
+mouse_filter = 2
+texture = ExtResource("2_icon")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Title" type="Label" parent="."]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -420.0
+offset_top = 70.0
+offset_right = 420.0
+offset_bottom = 130.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.32, 0.68, 1, 1)
+theme_override_font_sizes/font_size = 54
+text = "WIT MONSTER"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="."]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -420.0
+offset_top = 128.0
+offset_right = 420.0
+offset_bottom = 166.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.78, 0.3, 1)
+theme_override_font_sizes/font_size = 30
+text = "RISK RUN"
+horizontal_alignment = 1
+
+[node name="Menu" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -420.0
+offset_top = -60.0
+offset_right = -60.0
+offset_bottom = 130.0
+theme_override_constants/separation = 14
+
+[node name="RecordLabel" type="Label" parent="."]
+unique_name_in_owner = true
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -54.0
+offset_bottom = -20.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 1, 1, 0.5)
+theme_override_font_sizes/font_size = 16
+text = "No claims on file."
+horizontal_alignment = 1
+
+[node name="DeductiblePanel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -360.0
+offset_top = -220.0
+offset_right = 360.0
+offset_bottom = 220.0
+
+[node name="Margin" type="MarginContainer" parent="DeductiblePanel"]
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 20
+
+[node name="VBox" type="VBoxContainer" parent="DeductiblePanel/Margin"]
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="DeductiblePanel/Margin/VBox"]
+theme_override_font_sizes/font_size = 26
+text = "CHOOSE YOUR DEDUCTIBLE"
+horizontal_alignment = 1
+
+[node name="Hint" type="Label" parent="DeductiblePanel/Margin/VBox"]
+theme_override_colors/font_color = Color(1, 1, 1, 0.6)
+theme_override_font_sizes/font_size = 15
+text = "A higher deductible means thinner Coverage and angrier perils — and much better cards."
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="DeductibleRows" type="VBoxContainer" parent="DeductiblePanel/Margin/VBox"]
+unique_name_in_owner = true
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+
+[node name="SettingsPanel" parent="." instance=ExtResource("3_settings")]
+unique_name_in_owner = true
+visible = false

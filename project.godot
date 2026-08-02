@@ -8,7 +8,7 @@ config_version=5
 
 config/name="WIT Monster: Risk Run"
 config/description="Mobile-first side-scrolling action roguelite starring the We Insure Things Monster."
-run/main_scene="res://scenes/main.tscn"
+run/main_scene="res://scenes/title.tscn"
 config/features=PackedStringArray("4.3")
 config/icon="res://icon.svg"
 
@@ -18,6 +18,7 @@ Events="*res://scripts/autoload/events.gd"
 SaveManager="*res://scripts/autoload/save_manager.gd"
 Juice="*res://scripts/autoload/juice.gd"
 Sfx="*res://scripts/autoload/sfx.gd"
+Settings="*res://scripts/autoload/settings.gd"
 MusicManager="*res://scripts/autoload/music_manager.gd"
 GameManager="*res://scripts/autoload/game_manager.gd"
 

@@ -23,7 +23,10 @@ func _ready() -> void:
 	hud.restart_requested.connect(_on_restart_requested)
 	Events.run_ended.connect(_on_run_ended)
 	Events.card_chosen.connect(_on_card_chosen)
-	if not GameManager.resume_run():
+	Settings.apply_all()
+	# Normally the title screen has already started or resumed the run; this
+	# keeps main.tscn runnable on its own for quick iteration.
+	if not GameManager.run_active and not GameManager.resume_run():
 		GameManager.start_new_run()
 	_load_room(GameManager.current_room_path())
 

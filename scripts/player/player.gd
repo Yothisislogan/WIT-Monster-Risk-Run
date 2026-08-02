@@ -105,8 +105,15 @@ var _was_on_floor: bool = true
 var _fall_speed: float = 0.0
 
 
+var auto_fire: bool = false
+
+
 func _ready() -> void:
 	base_sprite_scale = sprite.scale.abs()
+	auto_fire = bool(Settings.get_value("auto_fire"))
+	Settings.changed.connect(func(key: String, value: Variant) -> void:
+		if key == "auto_fire":
+			auto_fire = bool(value))
 
 
 ## Rooms clamp the camera so the void outside the level is never on screen.
@@ -346,6 +353,11 @@ func _process_stomp() -> void:
 
 
 func _process_weapon(delta: float) -> void:
+	# Auto-fire accessibility option: holding nothing still shoots (§22).
+	if auto_fire and not charging and fire_timer <= 0.0 \
+			and not Input.is_action_pressed("attack"):
+		_fire(projectile_damage, false)
+		Sfx.play("shoot", 0.08, 0.8)
 	# Charging never blocks running or jumping (§7).
 	if Input.is_action_just_pressed("attack") and fire_timer <= 0.0:
 		charging = true

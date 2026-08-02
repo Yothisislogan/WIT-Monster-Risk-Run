@@ -13,6 +13,7 @@ var _shake_amount: float = 0.0
 var _shake_decay: float = 0.0
 var _shake_offset: Vector2 = Vector2.ZERO
 var _hit_stop_active: bool = false
+var _base_time_scale: float = 1.0
 
 var _pool: Array[CPUParticles2D] = []
 var _pool_index: int = 0
@@ -77,8 +78,16 @@ func hit_stop(duration: float) -> void:
 	Engine.time_scale = 0.0
 	# ignore_time_scale = true so the timer still fires while frozen.
 	await get_tree().create_timer(duration, true, false, true).timeout
-	Engine.time_scale = 1.0
+	Engine.time_scale = _base_time_scale
 	_hit_stop_active = false
+
+
+## The accessibility game-speed option (§22). Hit-stop restores to this
+## rather than to 1.0, so the two never fight.
+func set_base_time_scale(value: float) -> void:
+	_base_time_scale = clampf(value, 0.4, 1.0)
+	if not _hit_stop_active:
+		Engine.time_scale = _base_time_scale
 
 
 ## Generic one-shot burst. Reuses pooled emitters so combat never allocates.

@@ -5,6 +5,9 @@ extends CanvasLayer
 
 signal restart_requested
 
+const PATCH_COST := 40
+const PATCH_HEAL := 45
+
 @onready var coverage_bar: ProgressBar = %CoverageBar
 @onready var coverage_label: Label = %CoverageLabel
 @onready var charge_bar: ProgressBar = %ChargeBar
@@ -31,6 +34,9 @@ signal restart_requested
 @onready var boss_box: VBoxContainer = %BossBox
 @onready var boss_name: Label = %BossName
 @onready var boss_bar: ProgressBar = %BossBar
+@onready var hint_label: Label = %HintLabel
+@onready var inventory_label: Label = %InventoryLabel
+@onready var quit_button: Button = %QuitButton
 
 var _banner_tween: Tween
 var _rng := RandomNumberGenerator.new()
@@ -61,6 +67,9 @@ func _ready() -> void:
 	resume_button.pressed.connect(func() -> void:
 		Sfx.play("ui_confirm")
 		get_tree().paused = false)
+	quit_button.pressed.connect(_on_quit_pressed)
+	Events.enemy_weakened.connect(func() -> void:
+		_hint("munch", "Green perils are weakened — MUNCH to eat one and heal"))
 	music_button.pressed.connect(_on_music_pressed)
 	_refresh_music_button()
 
@@ -76,7 +85,48 @@ func _refresh_music_button() -> void:
 
 func _process(_delta: float) -> void:
 	# The card picker also pauses, so do not stack the two overlays.
-	pause_panel.visible = get_tree().paused and not card_panel.visible
+	var show_pause := get_tree().paused and not card_panel.visible
+	if show_pause and not pause_panel.visible:
+		_refresh_inventory()
+	pause_panel.visible = show_pause
+
+
+func _on_quit_pressed() -> void:
+	Sfx.play("ui_confirm")
+	# The run is already checkpointed per room, so quitting is non-destructive.
+	get_tree().paused = false
+	get_tree().change_scene_to_file("res://scenes/title.tscn")
+
+
+## Pause doubles as the inventory screen (§23): what you are actually holding.
+func _refresh_inventory() -> void:
+	var entries := GameManager.card_list()
+	if entries.is_empty():
+		inventory_label.text = "No endorsements held."
+		return
+	var lines: Array[String] = []
+	for entry in entries:
+		var card: PolicyCard = entry["card"]
+		var stacks := int(entry["stacks"])
+		var suffix := " x%d" % stacks if stacks > 1 else ""
+		lines.append("• %s%s" % [card.title, suffix])
+	inventory_label.text = "\n".join(lines)
+
+
+## One-time contextual teaching, so no tutorial level is needed (§32).
+func _hint(id: String, text: String) -> void:
+	var profile: Dictionary = SaveManager.get_section("profile")
+	var seen: Array = profile.get("hints_seen", [])
+	if id in seen:
+		return
+	seen.append(id)
+	profile["hints_seen"] = seen
+	SaveManager.set_section("profile", profile)
+	hint_label.text = text
+	var tween := create_tween()
+	tween.tween_property(hint_label, "modulate:a", 1.0, 0.3)
+	tween.tween_interval(3.4)
+	tween.tween_property(hint_label, "modulate:a", 0.0, 0.6)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -143,6 +193,7 @@ func _on_room_started(path: String) -> void:
 	banner_sub.text = String(entry.get("subtitle", ""))
 	banner_room.text = "ROOM %d / %d" % [
 		GameManager.room_index + 1, GameManager.room_sequence.size()]
+	_hint("double_jump", "Tap JUMP again in mid-air to double jump")
 	if _banner_tween != null and _banner_tween.is_valid():
 		_banner_tween.kill()
 	banner.modulate.a = 0.0
@@ -157,6 +208,7 @@ func _on_room_started(path: String) -> void:
 
 
 func _on_boss_spawned(title: String, maximum: int) -> void:
+	_hint("boss", "Every attack telegraphs. Punish the stun that follows.")
 	boss_name.text = title
 	boss_bar.max_value = maximum
 	boss_bar.value = maximum
@@ -191,9 +243,44 @@ func _on_cards_offered(cards: Array) -> void:
 		return
 	for card in cards:
 		card_row.add_child(_build_card_button(card))
+	var repair := _build_patch_button()
+	if repair != null:
+		card_row.add_child(repair)
 	card_panel.visible = true
 	get_tree().paused = true
 	Sfx.play("ui_move")
+
+
+## Spend Premiums instead of taking an endorsement (§15 shop, compressed into
+## the same decision so it is one screen rather than two).
+func _build_patch_button() -> Button:
+	if GameManager.coverage >= GameManager.max_coverage:
+		return null
+	var cost := PATCH_COST
+	var button := Button.new()
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.custom_minimum_size = Vector2(0, 200)
+	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	button.add_theme_font_size_override("font_size", 17)
+	var affordable := GameManager.currency >= cost
+	button.text = "\n".join([
+		"PATCH UP", "",
+		"Restore %d Coverage instead of taking an endorsement." % PATCH_HEAL,
+		"", "COST: %d PREMIUMS" % cost])
+	button.disabled = not affordable
+	button.modulate = Color(0.6, 1.0, 0.7) if affordable else Color(0.5, 0.5, 0.5)
+	button.pressed.connect(_on_patch_picked)
+	return button
+
+
+func _on_patch_picked() -> void:
+	if not GameManager.spend_currency(PATCH_COST):
+		return
+	GameManager.heal(PATCH_HEAL)
+	Sfx.play("pickup_card")
+	card_panel.visible = false
+	get_tree().paused = false
+	Events.card_chosen.emit("")
 
 
 func _build_card_button(card: PolicyCard) -> Button:
