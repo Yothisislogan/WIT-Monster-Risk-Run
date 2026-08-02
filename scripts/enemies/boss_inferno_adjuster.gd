@@ -261,6 +261,7 @@ func die() -> void:
 	_state = State.DYING
 	Events.boss_health_changed.emit(0, max_health)
 	GameManager.record_enemy_defeated()
+	GameManager.record_boss_defeated()
 	# Absorbing the boss's power is the reward for the fight (§12), and the
 	# second ability is what unlocks a combination (§14).
 	GameManager.grant_ability(Abilities.IMPACT_DASH)

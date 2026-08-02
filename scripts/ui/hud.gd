@@ -432,6 +432,12 @@ func _show_claim_panel() -> void:
 
 func _format_report(report: Dictionary) -> String:
 	var prose := ClaimReport.compose(report, _rng)
+	# What the run bought you permanently goes last, so the eye lands on it —
+	# it is the reason to press RESTART rather than close the app (§24).
+	var tail: Array[String] = ["", "CASE FILES FILED:  %d  (%d on hand)" % [
+		int(report.get("case_files_awarded", 0)), Headquarters.case_files()]]
+	for file in report.get("case_files_new", []):
+		tail.append("   NEW CASE FILE — %s" % String(file.get("title", "")))
 	return "\n".join([
 		"Cause of loss:  %s" % prose["cause"],
 		"Contributing factor:  %s" % prose["factor"],
@@ -448,7 +454,7 @@ func _format_report(report: Dictionary) -> String:
 			report.get("estimated_property_damage", 0)),
 		"",
 		"CLAIM STATUS:  %s" % prose["status"],
-	])
+	] + tail)
 
 
 ## --- Off-screen danger indicators (§17) ------------------------------------

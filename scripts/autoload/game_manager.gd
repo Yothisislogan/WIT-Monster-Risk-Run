@@ -58,6 +58,7 @@ var revives_left: int = 0
 var combo: int = 0
 var combo_timer: float = 0.0
 var best_combo: int = 0
+var bosses_defeated: int = 0
 
 var stats := {
 	"rooms_completed": 0,
@@ -209,7 +210,7 @@ func card_list() -> Array:
 
 func _computed_max_coverage() -> int:
 	var base := int(DEDUCTIBLES[deductible]["coverage"])
-	return maxi(base + int(stat("max_coverage")), 20)
+	return maxi(base + int(stat("max_coverage")) + Headquarters.starting_coverage_bonus(), 20)
 
 
 func combo_window() -> float:
@@ -255,13 +256,17 @@ func start_new_run(chosen_deductible: String = "standard") -> void:
 	_recompute_modifiers()
 	max_coverage = _computed_max_coverage()
 	coverage = max_coverage
-	currency = 0
-	umbrella_active = false
-	ability_energy = 0.0
+	# Everything WIT Headquarters has bought applies here, once, at the top of
+	# the run (§24). Nothing below reads it again.
+	currency = Headquarters.starting_currency()
+	umbrella_active = Headquarters.starts_with_umbrella()
+	ability_energy = clampf(Headquarters.starting_energy(), 0.0, MAX_ABILITY_ENERGY)
 	abilities = unlocked_abilities()
 	ability_index = 0
 	revives_left = 0
-	risk = float(DEDUCTIBLES[deductible]["risk"])
+	risk = maxf(float(DEDUCTIBLES[deductible]["risk"])
+			+ Headquarters.starting_risk_bonus(), 0.0)
+	bosses_defeated = 0
 	combo = 0
 	combo_timer = 0.0
 	best_combo = 0
@@ -417,7 +422,17 @@ func end_run(victory: bool) -> void:
 	lifetime["best_property_damage"] = maxi(
 			int(lifetime.get("best_property_damage", 0)), _property_damage())
 	SaveManager.set_section("stats", lifetime)
-	Events.run_ended.emit(build_claim_report(victory))
+
+	# The run pays into Headquarters whether it was won or lost (§24) — a
+	# meta-currency that only pays on a win is one you cannot use until you no
+	# longer need it.
+	var report := build_claim_report(victory)
+	var fresh := CaseFiles.evaluate(report)
+	var awarded := Headquarters.award_for(report, fresh.size())
+	Headquarters.add_case_files(awarded)
+	report["case_files_awarded"] = awarded
+	report["case_files_new"] = fresh
+	Events.run_ended.emit(report)
 
 
 # --- Coverage / damage -----------------------------------------------------
@@ -503,6 +518,10 @@ func grant_umbrella() -> void:
 	umbrella_active = true
 	Events.shield_changed.emit(true)
 	Events.upgrade_gained.emit("umbrella_coverage")
+
+
+func record_boss_defeated() -> void:
+	bosses_defeated += 1
 
 
 func record_enemy_defeated() -> void:
@@ -634,4 +653,9 @@ func build_claim_report(victory: bool) -> Dictionary:
 		"risk": risk,
 		"cards": held_cards.size(),
 		"estimated_property_damage": _property_damage(),
+		# Fields the Case File table reads. Keep them raw: a label is for the
+		# reader, an id is for a condition.
+		"deductible_id": deductible,
+		"bosses_defeated": bosses_defeated,
+		"abilities_held": abilities.size(),
 	}

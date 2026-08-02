@@ -45,6 +45,7 @@ jobs:
           python3 tools/check_aim.py
           python3 tools/check_map.py
           python3 tools/check_sites.py
+          python3 tools/check_meta.py
           python3 tools/check_reachability.py
           python3 tools/check_pickups.py
           python3 tools/check_economy.py

@@ -9,6 +9,7 @@ const GAME_SCENE := "res://scenes/main.tscn"
 @onready var deductible_panel: PanelContainer = %DeductiblePanel
 @onready var deductible_rows: VBoxContainer = %DeductibleRows
 @onready var settings_panel: PanelContainer = %SettingsPanel
+@onready var headquarters: PanelContainer = %HeadquartersPanel
 @onready var record_label: Label = %RecordLabel
 
 
@@ -16,6 +17,12 @@ func _ready() -> void:
 	Settings.apply_all()
 	settings_panel.visible = false
 	deductible_panel.visible = false
+	headquarters.visible = false
+	headquarters.closed.connect(func() -> void:
+		headquarters.visible = false
+		menu.visible = true
+		_show_record()
+		_build_menu())
 	settings_panel.closed.connect(func() -> void:
 		settings_panel.visible = false
 		menu.visible = true
@@ -61,6 +68,7 @@ func _build_menu() -> void:
 		menu.add_child(first)
 	var new_policy := _button("NEW POLICY", _on_new_policy)
 	menu.add_child(new_policy)
+	menu.add_child(_button("WIT HEADQUARTERS", _on_headquarters))
 	menu.add_child(_button("OPTIONS", _on_options))
 	# A controller needs something focused or the whole title screen is inert.
 	# Focus the button we just made, not menu.get_child(0) — the old buttons
@@ -112,6 +120,13 @@ func _on_new_policy() -> void:
 	deductible_panel.visible = true
 	# STANDARD is the middle row and the sane default to land on.
 	(deductible_rows.get_child(1) as Button).call_deferred("grab_focus")
+
+
+func _on_headquarters() -> void:
+	Sfx.play("ui_move")
+	menu.visible = false
+	headquarters.visible = true
+	headquarters.refresh()
 
 
 func _on_options() -> void:

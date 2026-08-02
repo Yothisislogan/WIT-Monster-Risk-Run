@@ -1,8 +1,9 @@
-[gd_scene load_steps=4 format=3 uid="uid://wittitle000001"]
+[gd_scene load_steps=5 format=3 uid="uid://wittitle000001"]
 
 [ext_resource type="Script" path="res://scripts/ui/title_screen.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://icon.svg" id="2_icon"]
 [ext_resource type="PackedScene" path="res://scenes/ui/settings_panel.tscn" id="3_settings"]
+[ext_resource type="PackedScene" path="res://scenes/ui/headquarters_panel.tscn" id="4_hq"]
 
 [node name="TitleScreen" type="Control"]
 anchors_preset = 15
@@ -125,6 +126,10 @@ autowrap_mode = 3
 unique_name_in_owner = true
 size_flags_vertical = 3
 theme_override_constants/separation = 10
+
+[node name="HeadquartersPanel" parent="." instance=ExtResource("4_hq")]
+unique_name_in_owner = true
+visible = false
 
 [node name="SettingsPanel" parent="." instance=ExtResource("3_settings")]
 unique_name_in_owner = true
