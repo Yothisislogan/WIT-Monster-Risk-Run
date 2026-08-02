@@ -27,11 +27,13 @@ var burn_damage: int = 0
 var _burn_timer: Timer
 var _health_fill: Polygon2D
 var _health_bg: Polygon2D
+var is_elite: bool = false
 
 
 func _ready() -> void:
 	# Perils scale with the Risk Meter (§11), applied once at spawn.
 	max_health = maxi(int(round(float(max_health) * GameManager.enemy_health_factor())), 1)
+	_maybe_promote_to_elite()
 	health = max_health
 	hitbox.body_entered.connect(_on_hitbox_body_entered)
 	if always_active:
@@ -46,6 +48,24 @@ func _ready() -> void:
 	_burn_timer.timeout.connect(_on_burn_tick)
 	add_child(_burn_timer)
 	_build_health_bar()
+
+
+## At high Risk a share of perils arrive as elites: visibly larger, tougher,
+## and worth more. This is the Risk Meter you can actually see (§11).
+func _maybe_promote_to_elite() -> void:
+	if always_active or GameManager.risk < 0.35:
+		return
+	var chance := (GameManager.risk - 0.35) * 0.55
+	if randf() > chance:
+		return
+	is_elite = true
+	max_health = int(round(float(max_health) * 1.8))
+	contact_damage = int(round(float(contact_damage) * 1.35))
+	currency_reward = int(round(float(currency_reward) * 2.0))
+	premium_drops += 2
+	defeat_source = "outmatched by an elite peril"
+	scale = Vector2(1.28, 1.28)
+	modulate = Color(1.25, 0.9, 1.15)
 
 
 ## A hairline bar that only appears once the enemy has been hurt, so a full

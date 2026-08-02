@@ -1,9 +1,10 @@
-[gd_scene load_steps=9 format=3 uid="uid://witbossroom001"]
+[gd_scene load_steps=10 format=3 uid="uid://witbossroom001"]
 
 [ext_resource type="Script" path="res://scripts/rooms/boss_room.gd" id="1_room"]
 [ext_resource type="PackedScene" path="res://scenes/enemies/boss_inferno_adjuster.tscn" id="2_boss"]
 [ext_resource type="PackedScene" path="res://scenes/rooms/premium.tscn" id="3_premium"]
 [ext_resource type="PackedScene" path="res://scenes/rooms/bounce_pad.tscn" id="4_pad"]
+[ext_resource type="PackedScene" path="res://scenes/rooms/coverage_pickup.tscn" id="5_medkit"]
 
 [sub_resource type="RectangleShape2D" id="rect_ground"]
 size = Vector2(1600, 60)
@@ -107,6 +108,9 @@ position = Vector2(280, 440)
 
 [node name="Coin2" parent="Pickups" instance=ExtResource("3_premium")]
 position = Vector2(1320, 440)
+
+[node name="Medkit" parent="Pickups" instance=ExtResource("5_medkit")]
+position = Vector2(800, 430)
 
 [node name="Exit" type="Area2D" parent="."]
 position = Vector2(800, 550)

@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://witroomc00001"]
+[gd_scene load_steps=18 format=3 uid="uid://witroomc00001"]
 
 [ext_resource type="Script" path="res://scripts/rooms/room.gd" id="1_room"]
 [ext_resource type="PackedScene" path="res://scenes/enemies/toaster_trooper.tscn" id="2_trooper"]
@@ -9,6 +9,8 @@
 [ext_resource type="PackedScene" path="res://scenes/rooms/moving_platform.tscn" id="7_movplat"]
 [ext_resource type="PackedScene" path="res://scenes/enemies/ember_imp.tscn" id="8_imp"]
 [ext_resource type="PackedScene" path="res://scenes/rooms/pickup_policy_card.tscn" id="9_pickup"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/lawsuit_launcher.tscn" id="10_launcher"]
+[ext_resource type="PackedScene" path="res://scenes/rooms/coverage_pickup.tscn" id="11_medkit"]
 
 [sub_resource type="RectangleShape2D" id="rect_ground_l"]
 size = Vector2(500, 60)
@@ -148,6 +150,9 @@ position = Vector2(760, 380)
 [node name="Imp2" parent="Enemies" instance=ExtResource("8_imp")]
 position = Vector2(1300, 300)
 
+[node name="Launcher1" parent="Enemies" instance=ExtResource("10_launcher")]
+position = Vector2(1120, 200)
+
 [node name="Hazards" type="Node2D" parent="."]
 
 [node name="Vent1" parent="Hazards" instance=ExtResource("3_vent")]
@@ -201,6 +206,9 @@ position = Vector2(1120, 190)
 
 [node name="Stash6" parent="Pickups" instance=ExtResource("4_premium")]
 position = Vector2(1160, 190)
+
+[node name="Medkit" parent="Pickups" instance=ExtResource("11_medkit")]
+position = Vector2(700, 460)
 
 [node name="Exit" type="Area2D" parent="."]
 position = Vector2(1560, 550)
