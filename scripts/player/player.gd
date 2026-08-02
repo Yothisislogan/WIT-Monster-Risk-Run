@@ -94,6 +94,9 @@ var jump_buffer_timer: float = 0.0
 var dash_buffer_timer: float = 0.0
 var wall_coyote_timer: float = 0.0
 var last_wall_normal: float = 0.0
+## Which wall last paid for an air-jump refill this airtime. Cleared on
+## landing; see _process_wall.
+var _refilled_wall_normal: float = 0.0
 
 var air_jumps_left: int = 0
 
@@ -236,14 +239,21 @@ func _process_walk(delta: float) -> void:
 		velocity.x = move_toward(velocity.x, 0.0, ground_friction * _surface_friction * delta)
 
 
-func _process_wall(delta: float) -> void:
+func _process_wall(_delta: float) -> void:
 	if is_on_wall_only() and _pressing_into_wall() and velocity.y > 0.0:
 		# Wall cling: slow slide while holding toward the wall.
 		velocity.y = minf(velocity.y, wall_slide_speed)
 		wall_coyote_timer = wall_coyote_time
-		last_wall_normal = get_wall_normal().x
-		# Touching a wall refreshes the air jump so wall chains stay expressive.
-		air_jumps_left = _max_air_jumps()
+		var normal := get_wall_normal().x
+		last_wall_normal = normal
+		# Grabbing a wall refreshes the air jump so chimney chains stay
+		# expressive — but only on a wall facing the other way. Refreshing on
+		# every cling frame let you wall-jump off a single flat wall, double
+		# jump back into it, and climb forever, which would make the jump
+		# budget tools/check_reachability.py enforces meaningless.
+		if signf(normal) != signf(_refilled_wall_normal):
+			_refilled_wall_normal = normal
+			air_jumps_left = _max_air_jumps()
 
 
 func _pressing_into_wall() -> bool:
@@ -269,7 +279,7 @@ func _try_jump() -> void:
 		Sfx.play("wall_jump")
 		Juice.jump_puff(global_position)
 		_squash = Vector2(0.85, 1.18)
-	elif air_jumps_left > 0 or _bonus_air_jumps() > 0:
+	elif air_jumps_left > 0:
 		# Double jump: hard reset of vertical speed so it always feels the same,
 		# whether tapped at the apex or during a long fall.
 		air_jumps_left -= 1
@@ -349,13 +359,12 @@ func _land_pound() -> void:
 	Juice.shake(9.0, 0.35)
 	Juice.hit_stop(0.06)
 	_squash = Vector2(1.5, 0.55)
-	# Shockwave damages everything grounded nearby and pops open crates.
+	# Shockwave damages everything grounded nearby. Crates are StaticBody2D on
+	# the pickup layer, so they come through this loop too — the only Area2Ds
+	# in the mask are Premiums and card pickups, which nothing here can break.
 	for body in pound_area.get_overlapping_bodies():
 		if body.has_method("take_damage"):
 			body.take_damage(pound_damage + int(GameManager.stat("pound_damage")))
-	for area in pound_area.get_overlapping_areas():
-		if area.has_method("shatter"):
-			area.shatter()
 
 
 ## Landing on an enemy from above stomps it instead of hurting the player.
@@ -494,9 +503,6 @@ func _sweep_impact() -> void:
 			body.apply_burn(impact_burn_damage, impact_burn_ticks)
 		Juice.hit_spark(body.global_position)
 		Juice.hit_stop(0.04)
-	for area in impact_area.get_overlapping_areas():
-		if area.has_method("shatter"):
-			area.shatter()
 
 
 ## Monster Munch: consume a nearby weakened enemy (§7).
@@ -532,6 +538,7 @@ func _after_move() -> void:
 		coyote_timer = coyote_time
 		air_dash_available = true
 		air_jumps_left = _max_air_jumps()
+		_refilled_wall_normal = 0.0
 		if not _was_on_floor:
 			_on_landed()
 	_was_on_floor = on_floor

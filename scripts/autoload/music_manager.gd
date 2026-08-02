@@ -14,6 +14,7 @@ const HIGH_RISK_THRESHOLD := 0.5
 const HIGH_RISK_PITCH := 1.06
 
 const VICTORY_CUE := "claim_victory"
+const DEFEAT_CUE := "claim_denied"
 
 var volume: float = 0.7
 var enabled: bool = true
@@ -53,8 +54,10 @@ func _on_risk_changed(value: float) -> void:
 		player.pitch_scale = pitch
 
 
-func _on_run_ended(_report: Dictionary) -> void:
-	play(VICTORY_CUE, false)
+## The claim report already knows how the run ended; the music has to agree.
+## A fanfare over "CLAIM DENIED" reads as a bug, not as irony.
+func _on_run_ended(report: Dictionary) -> void:
+	play(VICTORY_CUE if bool(report.get("victory", false)) else DEFEAT_CUE, false)
 
 
 func play(track: String, loop: bool = true) -> void:

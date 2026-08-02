@@ -18,7 +18,8 @@ func _ready() -> void:
 	deductible_panel.visible = false
 	settings_panel.closed.connect(func() -> void:
 		settings_panel.visible = false
-		menu.visible = true)
+		menu.visible = true
+		_build_menu())
 	_build_menu()
 	_build_deductibles()
 	_show_record()
@@ -52,11 +53,21 @@ func _show_record() -> void:
 
 func _build_menu() -> void:
 	for child in menu.get_children():
+		menu.remove_child(child)
 		child.queue_free()
+	var first: Button = null
 	if SaveManager.has_resumable_run():
-		menu.add_child(_button("CONTINUE RUN", _on_continue))
-	menu.add_child(_button("NEW POLICY", _on_new_policy))
+		first = _button("CONTINUE RUN", _on_continue)
+		menu.add_child(first)
+	var new_policy := _button("NEW POLICY", _on_new_policy)
+	menu.add_child(new_policy)
 	menu.add_child(_button("OPTIONS", _on_options))
+	# A controller needs something focused or the whole title screen is inert.
+	# Focus the button we just made, not menu.get_child(0) — the old buttons
+	# are only queue_freed and would still be there to be picked up.
+	if first == null:
+		first = new_policy
+	first.call_deferred("grab_focus")
 
 
 func _button(text: String, handler: Callable) -> Button:
@@ -99,12 +110,15 @@ func _on_new_policy() -> void:
 	Sfx.play("ui_move")
 	menu.visible = false
 	deductible_panel.visible = true
+	# STANDARD is the middle row and the sane default to land on.
+	(deductible_rows.get_child(1) as Button).call_deferred("grab_focus")
 
 
 func _on_options() -> void:
 	Sfx.play("ui_move")
 	menu.visible = false
 	settings_panel.visible = true
+	settings_panel.focus_first()
 
 
 func _on_deductible_picked(key: String) -> void:

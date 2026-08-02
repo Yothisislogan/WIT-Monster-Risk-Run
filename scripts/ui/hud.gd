@@ -94,6 +94,7 @@ func _process(_delta: float) -> void:
 	var show_pause := get_tree().paused and not card_panel.visible
 	if show_pause and not pause_panel.visible:
 		_refresh_inventory()
+		_focus_control(resume_button)
 	pause_panel.visible = show_pause
 
 
@@ -128,6 +129,27 @@ func _refresh_inventory() -> void:
 		var suffix := " x%d" % stacks if stacks > 1 else ""
 		lines.append("• %s%s" % [card.title, suffix])
 	inventory_label.text = "\n".join(lines)
+
+
+## --- Controller focus (§6 parity) ------------------------------------------
+## Every overlay that pauses the game has to hand a gamepad somewhere to
+## start, or the pad simply does nothing while the overlay is up. Focus is
+## grabbed a frame late because the buttons are built in the same call.
+
+func _focus_control(control: Control) -> void:
+	if control == null:
+		return
+	control.call_deferred("grab_focus")
+
+
+func _focus_first(container: Node) -> void:
+	for child in container.get_children():
+		if child is Control and (child as Control).focus_mode != Control.FOCUS_NONE \
+				and not (child as Control).is_class("Label"):
+			if child is BaseButton and (child as BaseButton).disabled:
+				continue
+			_focus_control(child)
+			return
 
 
 ## One-time contextual teaching, so no tutorial level is needed (§32).
@@ -303,6 +325,9 @@ func _on_cards_offered(cards: Array) -> void:
 	card_panel.visible = true
 	get_tree().paused = true
 	Sfx.play("ui_move")
+	# Without this the run's central decision is mouse/touch only: a gamepad
+	# has nothing focused to move away from (§6 controller parity).
+	_focus_first(card_row)
 
 
 ## Spend Premiums instead of taking an endorsement (§15 shop, compressed into
@@ -370,6 +395,7 @@ func _on_run_started() -> void:
 func _on_run_ended(report: Dictionary) -> void:
 	claim_text.text = _format_report(report)
 	claim_panel.visible = true
+	_focus_control(restart_button)
 
 
 func _format_report(report: Dictionary) -> String:

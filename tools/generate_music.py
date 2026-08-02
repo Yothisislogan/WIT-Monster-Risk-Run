@@ -326,6 +326,18 @@ TRACKS = {
             "G5:2 B5:2 D6:4 B5:2 D6:2 G6:4 "
             "C6:4 G5:4 E5:4 C6:4"
         )),
+    # The defeat counterpart. Same length and instrumentation as the victory
+    # cue so the claim report feels like one screen with two verdicts: minor
+    # key, slower, and the melody falls where the victory melody climbs.
+    "claim_denied": dict(
+        bpm=104, lead_duty=0.25, arp_vol=0.11, arp_duty=0.5,
+        progression=[("A2", "i", 1), ("F2", "VI", 1), ("D2", "iv", 1), ("E2", "V", 1)],
+        melody=(
+            "A5:4 G5:2 E5:2 C5:4 A4:4 "
+            "F5:4 E5:2 C5:2 A4:8 "
+            "D5:4 C5:2 A4:2 F4:4 D4:4 "
+            "E5:4 D5:4 C5:4 A4:4"
+        )),
 }
 
 

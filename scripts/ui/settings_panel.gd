@@ -81,3 +81,14 @@ func _build_row(option: Dictionary) -> Control:
 		row.add_child(slider)
 		row.add_child(readout)
 	return row
+
+
+## Called by whichever screen opened the panel. Sliders and toggles are both
+## focusable, so a controller can walk the whole list once it starts here.
+func focus_first() -> void:
+	for row in rows.get_children():
+		for control in row.get_children():
+			if control is Button or control is Slider:
+				(control as Control).call_deferred("grab_focus")
+				return
+	close_button.call_deferred("grab_focus")

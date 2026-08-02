@@ -90,6 +90,17 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_rng.randomize()
 	_recompute_modifiers()
+	Input.joy_connection_changed.connect(_on_joy_connection_changed)
+
+
+## A pad that dies mid-room leaves the player with no way to move and, worse,
+## whatever direction was last held still applied. Pausing is the same
+## courtesy as the focus-out auto-pause below (§17).
+func _on_joy_connection_changed(_device: int, connected: bool) -> void:
+	if connected or not run_active:
+		return
+	if Input.get_connected_joypads().is_empty():
+		get_tree().paused = true
 
 
 func _process(delta: float) -> void:
