@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://withud0000001"]
+[gd_scene load_steps=7 format=3 uid="uid://withud0000001"]
 
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
 
@@ -18,6 +18,13 @@ corner_radius_bottom_left = 6
 
 [sub_resource type="StyleBoxFlat" id="style_charge_fill"]
 bg_color = Color(1, 0.85, 0.2, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="style_risk_fill"]
+bg_color = Color(0.85, 0.25, 0.45, 1)
 corner_radius_top_left = 4
 corner_radius_top_right = 4
 corner_radius_bottom_right = 4
@@ -84,6 +91,22 @@ max_value = 100.0
 value = 0.0
 show_percentage = false
 
+[node name="RiskLabel" type="Label" parent="Root/CoverageBox"]
+unique_name_in_owner = true
+theme_override_colors/font_color = Color(1, 0.6, 0.68, 1)
+theme_override_font_sizes/font_size = 13
+text = "RISK: STANDARD"
+
+[node name="RiskBar" type="ProgressBar" parent="Root/CoverageBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 8)
+theme_override_styles/background = SubResource("style_bar_bg")
+theme_override_styles/fill = SubResource("style_risk_fill")
+max_value = 1.0
+step = 0.01
+value = 0.0
+show_percentage = false
+
 [node name="ShieldLabel" type="Label" parent="Root/CoverageBox"]
 unique_name_in_owner = true
 visible = false
@@ -119,6 +142,83 @@ theme_override_colors/font_color = Color(1, 0.78, 0.25, 1)
 theme_override_font_sizes/font_size = 18
 text = "STREAK x2  (1x PREMIUMS)"
 horizontal_alignment = 2
+
+[node name="BossBox" type="VBoxContainer" parent="Root"]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -300.0
+offset_top = 18.0
+offset_right = 300.0
+offset_bottom = 60.0
+theme_override_constants/separation = 3
+
+[node name="BossName" type="Label" parent="Root/BossBox"]
+unique_name_in_owner = true
+theme_override_colors/font_color = Color(1, 0.72, 0.55, 1)
+theme_override_font_sizes/font_size = 18
+text = "THE INFERNO ADJUSTER"
+horizontal_alignment = 1
+
+[node name="BossBar" type="ProgressBar" parent="Root/BossBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(600, 18)
+theme_override_styles/background = SubResource("style_bar_bg")
+theme_override_styles/fill = SubResource("style_risk_fill")
+max_value = 100.0
+value = 100.0
+show_percentage = false
+
+[node name="Banner" type="VBoxContainer" parent="Root"]
+unique_name_in_owner = true
+modulate = Color(1, 1, 1, 0)
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -320.0
+offset_top = 92.0
+offset_right = 320.0
+offset_bottom = 176.0
+theme_override_constants/separation = 2
+
+[node name="BannerName" type="Label" parent="Root/Banner"]
+unique_name_in_owner = true
+theme_override_font_sizes/font_size = 38
+text = "BLAZE BOROUGH"
+horizontal_alignment = 1
+
+[node name="BannerSub" type="Label" parent="Root/Banner"]
+unique_name_in_owner = true
+theme_override_colors/font_color = Color(0.62, 0.78, 1, 1)
+theme_override_font_sizes/font_size = 17
+text = "Residential — total loss likely"
+horizontal_alignment = 1
+
+[node name="BannerRoom" type="Label" parent="Root/Banner"]
+unique_name_in_owner = true
+theme_override_colors/font_color = Color(1, 1, 1, 0.55)
+theme_override_font_sizes/font_size = 15
+text = "ROOM 1 / 3"
+horizontal_alignment = 1
+
+[node name="HintLabel" type="Label" parent="Root"]
+unique_name_in_owner = true
+modulate = Color(1, 1, 1, 0)
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -340.0
+offset_top = -128.0
+offset_right = 340.0
+offset_bottom = -96.0
+theme_override_colors/font_color = Color(1, 0.92, 0.6, 1)
+theme_override_font_sizes/font_size = 20
+text = ""
+horizontal_alignment = 1
 
 [node name="ClaimPanel" type="PanelContainer" parent="Root"]
 unique_name_in_owner = true
@@ -158,6 +258,38 @@ custom_minimum_size = Vector2(0, 56)
 theme_override_font_sizes/font_size = 20
 text = "FILE A NEW CLAIM (RESTART)"
 
+[node name="CardPanel" type="PanelContainer" parent="Root"]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -600.0
+offset_top = -200.0
+offset_right = 600.0
+offset_bottom = 200.0
+
+[node name="Margin" type="MarginContainer" parent="Root/CardPanel"]
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 16
+
+[node name="VBox" type="VBoxContainer" parent="Root/CardPanel/Margin"]
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Root/CardPanel/Margin/VBox"]
+theme_override_font_sizes/font_size = 24
+text = "ENDORSE ONE POLICY"
+horizontal_alignment = 1
+
+[node name="CardRow" type="HBoxContainer" parent="Root/CardPanel/Margin/VBox"]
+unique_name_in_owner = true
+size_flags_vertical = 3
+theme_override_constants/separation = 14
+
 [node name="PausePanel" type="PanelContainer" parent="Root"]
 unique_name_in_owner = true
 visible = false
@@ -166,10 +298,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -200.0
-offset_top = -140.0
-offset_right = 200.0
-offset_bottom = 140.0
+offset_left = -260.0
+offset_top = -210.0
+offset_right = 260.0
+offset_bottom = 210.0
 
 [node name="Margin" type="MarginContainer" parent="Root/PausePanel"]
 theme_override_constants/margin_left = 24
@@ -191,8 +323,21 @@ custom_minimum_size = Vector2(0, 56)
 theme_override_font_sizes/font_size = 20
 text = "RESUME"
 
+[node name="InventoryLabel" type="Label" parent="Root/PausePanel/Margin/VBox"]
+unique_name_in_owner = true
+theme_override_colors/font_color = Color(0.78, 0.86, 1, 1)
+theme_override_font_sizes/font_size = 15
+text = "No endorsements held."
+autowrap_mode = 3
+
 [node name="MusicButton" type="Button" parent="Root/PausePanel/Margin/VBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 48)
 theme_override_font_sizes/font_size = 18
 text = "MUSIC: ON"
+
+[node name="QuitButton" type="Button" parent="Root/PausePanel/Margin/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+theme_override_font_sizes/font_size = 17
+text = "SAVE AND QUIT TO TITLE"

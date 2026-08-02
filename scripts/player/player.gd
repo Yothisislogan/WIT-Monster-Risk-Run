@@ -105,8 +105,25 @@ var _was_on_floor: bool = true
 var _fall_speed: float = 0.0
 
 
+var auto_fire: bool = false
+
+
 func _ready() -> void:
 	base_sprite_scale = sprite.scale.abs()
+	auto_fire = bool(Settings.get_value("auto_fire"))
+	Settings.changed.connect(func(key: String, value: Variant) -> void:
+		if key == "auto_fire":
+			auto_fire = bool(value))
+
+
+## Rooms clamp the camera so the void outside the level is never on screen.
+func apply_camera_bounds(bounds: Rect2) -> void:
+	var camera: Camera2D = $Camera
+	camera.limit_left = int(bounds.position.x)
+	camera.limit_top = int(bounds.position.y)
+	camera.limit_right = int(bounds.position.x + bounds.size.x)
+	camera.limit_bottom = int(bounds.position.y + bounds.size.y)
+	camera.reset_smoothing()
 
 
 func _physics_process(delta: float) -> void:
@@ -165,12 +182,25 @@ func _apply_gravity(delta: float) -> void:
 		velocity.y *= jump_cut_multiplier
 
 
+## Cards can raise these, so read them fresh rather than caching.
+func _speed() -> float:
+	return move_speed * GameManager.factor("move_speed_mult")
+
+
+func _max_air_jumps() -> int:
+	return max_air_jumps + _bonus_air_jumps()
+
+
+func _bonus_air_jumps() -> int:
+	return int(GameManager.stat("air_jumps"))
+
+
 func _process_walk(delta: float) -> void:
 	var direction := Input.get_axis("move_left", "move_right")
 	if direction != 0.0:
 		facing = 1 if direction > 0.0 else -1
 		var accel := ground_accel if is_on_floor() else air_accel
-		velocity.x = move_toward(velocity.x, direction * move_speed, accel * delta)
+		velocity.x = move_toward(velocity.x, direction * _speed(), accel * delta)
 	elif is_on_floor():
 		velocity.x = move_toward(velocity.x, 0.0, ground_friction * delta)
 
@@ -182,7 +212,7 @@ func _process_wall(delta: float) -> void:
 		wall_coyote_timer = wall_coyote_time
 		last_wall_normal = get_wall_normal().x
 		# Touching a wall refreshes the air jump so wall chains stay expressive.
-		air_jumps_left = max_air_jumps
+		air_jumps_left = _max_air_jumps()
 
 
 func _pressing_into_wall() -> bool:
@@ -194,7 +224,8 @@ func _try_jump() -> void:
 	if jump_buffer_timer <= 0.0:
 		return
 	if is_on_floor() or coyote_timer > 0.0:
-		_do_jump(jump_velocity)
+		_do_jump(jump_velocity * GameManager.factor("jump_mult"))
+		Sfx.play("jump")
 		Juice.jump_puff(_feet_position())
 		_squash = Vector2(0.82, 1.22)
 	elif wall_coyote_timer > 0.0:
@@ -204,13 +235,15 @@ func _try_jump() -> void:
 		facing = 1 if last_wall_normal > 0.0 else -1
 		jump_buffer_timer = 0.0
 		wall_coyote_timer = 0.0
+		Sfx.play("wall_jump")
 		Juice.jump_puff(global_position)
 		_squash = Vector2(0.85, 1.18)
-	elif air_jumps_left > 0:
+	elif air_jumps_left > 0 or _bonus_air_jumps() > 0:
 		# Double jump: hard reset of vertical speed so it always feels the same,
 		# whether tapped at the apex or during a long fall.
 		air_jumps_left -= 1
-		_do_jump(double_jump_velocity)
+		_do_jump(double_jump_velocity * GameManager.factor("jump_mult"))
+		Sfx.play("double_jump")
 		Juice.double_jump_ring(global_position)
 		Juice.shake(2.0, 0.12)
 		_squash = Vector2(0.75, 1.3)
@@ -230,7 +263,7 @@ func _try_dash() -> void:
 	dashing = true
 	dash_timer = dash_duration
 	dash_buffer_timer = 0.0
-	dash_cooldown_timer = dash_cooldown
+	dash_cooldown_timer = dash_cooldown * GameManager.factor("dash_cooldown_mult")
 	if not is_on_floor():
 		air_dash_available = false
 	var direction := Input.get_axis("move_left", "move_right")
@@ -239,6 +272,7 @@ func _try_dash() -> void:
 	velocity = Vector2(facing * dash_speed, 0.0)
 	# Dashing grants brief protection so it reads as powerful and reckless.
 	invulnerability_timer = maxf(invulnerability_timer, dash_duration)
+	Sfx.play("dash")
 	Juice.dust(_feet_position(), 10)
 	Juice.shake(3.0, 0.15)
 	_squash = Vector2(1.35, 0.7)
@@ -279,6 +313,7 @@ func _process_pound(delta: float) -> void:
 func _land_pound() -> void:
 	pounding = false
 	velocity.y = 0.0
+	Sfx.play("pound_impact")
 	Juice.shockwave(_feet_position())
 	Juice.shake(9.0, 0.35)
 	Juice.hit_stop(0.06)
@@ -286,7 +321,7 @@ func _land_pound() -> void:
 	# Shockwave damages everything grounded nearby and pops open crates.
 	for body in pound_area.get_overlapping_bodies():
 		if body.has_method("take_damage"):
-			body.take_damage(pound_damage)
+			body.take_damage(pound_damage + int(GameManager.stat("pound_damage")))
 	for area in pound_area.get_overlapping_areas():
 		if area.has_method("shatter"):
 			area.shatter()
@@ -301,12 +336,13 @@ func _process_stomp() -> void:
 			continue
 		if body.global_position.y < global_position.y:
 			continue  # only stomp things below us
-		body.take_damage(stomp_damage)
+		body.take_damage(stomp_damage + int(GameManager.stat("stomp_damage")))
 		# Holding jump gives a higher bounce — rewards deliberate chaining.
 		var held := Input.is_action_pressed("jump")
 		velocity.y = stomp_bounce_held_velocity if held else stomp_bounce_velocity
-		air_jumps_left = max_air_jumps  # stomping refunds the double jump
+		air_jumps_left = _max_air_jumps()  # stomping refunds the double jump
 		air_dash_available = true
+		Sfx.play_chain("streak")
 		Juice.hit_spark(body.global_position)
 		Juice.shake(4.0, 0.18)
 		Juice.hit_stop(0.045)
@@ -317,27 +353,39 @@ func _process_stomp() -> void:
 
 
 func _process_weapon(delta: float) -> void:
+	# Auto-fire accessibility option: holding nothing still shoots (§22).
+	if auto_fire and not charging and fire_timer <= 0.0 \
+			and not Input.is_action_pressed("attack"):
+		_fire(projectile_damage, false)
+		Sfx.play("shoot", 0.08, 0.8)
 	# Charging never blocks running or jumping (§7).
 	if Input.is_action_just_pressed("attack") and fire_timer <= 0.0:
 		charging = true
 		charge_timer = 0.0
 	if charging:
-		charge_timer += delta
+		var was_ready := charge_timer >= charge_time
+		charge_timer += delta * GameManager.factor("charge_speed_mult")
+		# One-shot cue the instant the shot is worth releasing.
+		if not was_ready and charge_timer >= charge_time:
+			Sfx.play("charge_ready", 0.02)
 		Events.charge_changed.emit(minf(charge_timer / charge_time, 1.0))
 		if Input.is_action_just_released("attack"):
 			charging = false
 			Events.charge_changed.emit(0.0)
 			if charge_timer >= charge_time:
 				_fire(charged_damage, true)
+				Sfx.play("charged_shot")
 				Juice.shake(3.5, 0.15)
 			else:
 				_fire(projectile_damage, false)
+				Sfx.play("shoot")
 
 
 func _fire(damage: int, pierce: bool) -> void:
-	fire_timer = fire_cooldown
+	fire_timer = fire_cooldown * GameManager.factor("fire_rate_mult")
+	var scaled := maxi(int(round(float(damage) * GameManager.factor("damage_mult"))), 1)
 	var projectile: Node2D = projectile_pool.acquire()
-	projectile.launch(muzzle.global_position, facing, damage, pierce)
+	projectile.launch(muzzle.global_position, facing, scaled, pierce)
 
 
 ## Flame Draft: costs ability energy, pierces, and ignites what it hits.
@@ -347,7 +395,9 @@ func _process_ability() -> void:
 	if not GameManager.try_spend_ability_energy():
 		return
 	var flame: Node2D = flame_pool.acquire()
-	flame.launch(muzzle.global_position, facing, flame_damage, true)
+	flame.launch(muzzle.global_position, facing,
+			int(round(float(flame_damage) * GameManager.factor("damage_mult"))), true)
+	Sfx.play("flame_draft")
 	Juice.shake(5.0, 0.2)
 	_squash = Vector2(1.2, 0.85)
 
@@ -358,6 +408,7 @@ func _process_munch() -> void:
 		return
 	for body in munch_area.get_overlapping_bodies():
 		if body.has_method("can_be_munched") and body.can_be_munched():
+			Sfx.play("munch")
 			Juice.enemy_death(body.global_position, Color(0.6, 1.0, 0.65))
 			Juice.hit_stop(0.05)
 			body.consume()
@@ -368,10 +419,11 @@ func _process_munch() -> void:
 ## Bounce pads and other launchers call this.
 func launch(power: float) -> void:
 	velocity.y = -absf(power)
-	air_jumps_left = max_air_jumps
+	air_jumps_left = _max_air_jumps()
 	air_dash_available = true
 	pounding = false
 	_squash = Vector2(0.7, 1.35)
+	Sfx.play("bounce")
 	Juice.jump_puff(_feet_position())
 	Juice.shake(3.0, 0.15)
 
@@ -381,7 +433,7 @@ func _after_move() -> void:
 	if on_floor:
 		coyote_timer = coyote_time
 		air_dash_available = true
-		air_jumps_left = max_air_jumps
+		air_jumps_left = _max_air_jumps()
 		if not _was_on_floor:
 			_on_landed()
 	_was_on_floor = on_floor
@@ -389,6 +441,10 @@ func _after_move() -> void:
 
 func _on_landed() -> void:
 	var strength := clampf(_fall_speed / max_fall_speed, 0.0, 1.0)
+	if strength > 0.6:
+		Sfx.play("land_hard", 0.05)
+	elif strength > 0.2:
+		Sfx.play("land", 0.08, 0.7)
 	if strength > 0.25:
 		Juice.land_dust(_feet_position(), strength)
 		_squash = Vector2(1.0 + 0.35 * strength, 1.0 - 0.3 * strength)
@@ -423,10 +479,11 @@ func _update_visuals(delta: float) -> void:
 func hurt(amount: int, source: String) -> void:
 	if invulnerability_timer > 0.0 or dashing:
 		return
-	invulnerability_timer = invulnerability_time
+	invulnerability_timer = maxf(invulnerability_time + GameManager.stat("invuln_time"), 0.2)
 	pounding = false
 	velocity = Vector2(hurt_knockback.x * -facing, hurt_knockback.y)
 	_squash = Vector2(1.3, 0.75)
+	Sfx.play("player_hurt")
 	Juice.shake(6.0, 0.3)
 	Juice.hit_stop(0.05)
 	GameManager.damage(amount, source)

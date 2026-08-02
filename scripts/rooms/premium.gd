@@ -77,7 +77,7 @@ func _magnetise(delta: float) -> bool:
 			return false
 	var to_player := _player.global_position - global_position
 	var distance := to_player.length()
-	if distance >= magnet_radius or distance <= 0.0:
+	if distance >= magnet_radius * GameManager.factor("coin_magnet_mult") or distance <= 0.0:
 		return false
 	# The magnet overrides gravity outright, so a coin never drifts away from
 	# a player who is already reaching for it. Never overshoot the player.
@@ -103,6 +103,7 @@ func _fall(delta: float) -> void:
 
 func _collect() -> void:
 	GameManager.add_currency(value)
+	Sfx.play_chain("coin", 0.8)
 	Juice.coin_sparkle(global_position)
 	queue_free()
 

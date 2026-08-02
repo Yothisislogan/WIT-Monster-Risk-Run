@@ -6,6 +6,10 @@ extends Node2D
 
 signal exit_reached
 
+## Camera clamp for this room, so the player never sees past the level edge
+## (GAME_DESIGN.md §17). Defaults to the standard 1600x720 room shell.
+@export var camera_bounds: Rect2 = Rect2(0, 0, 1600, 720)
+
 @onready var spawn_point: Marker2D = $SpawnPoint
 
 var _exited := false

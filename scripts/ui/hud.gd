@@ -5,6 +5,9 @@ extends CanvasLayer
 
 signal restart_requested
 
+const PATCH_COST := 40
+const PATCH_HEAL := 45
+
 @onready var coverage_bar: ProgressBar = %CoverageBar
 @onready var coverage_label: Label = %CoverageLabel
 @onready var charge_bar: ProgressBar = %ChargeBar
@@ -19,6 +22,24 @@ signal restart_requested
 @onready var pause_panel: PanelContainer = %PausePanel
 @onready var resume_button: Button = %ResumeButton
 @onready var music_button: Button = %MusicButton
+@onready var banner: VBoxContainer = %Banner
+@onready var banner_name: Label = %BannerName
+@onready var banner_sub: Label = %BannerSub
+@onready var banner_room: Label = %BannerRoom
+
+@onready var risk_bar: ProgressBar = %RiskBar
+@onready var risk_label: Label = %RiskLabel
+@onready var card_panel: PanelContainer = %CardPanel
+@onready var card_row: HBoxContainer = %CardRow
+@onready var boss_box: VBoxContainer = %BossBox
+@onready var boss_name: Label = %BossName
+@onready var boss_bar: ProgressBar = %BossBar
+@onready var hint_label: Label = %HintLabel
+@onready var inventory_label: Label = %InventoryLabel
+@onready var quit_button: Button = %QuitButton
+
+var _banner_tween: Tween
+var _rng := RandomNumberGenerator.new()
 
 
 func _ready() -> void:
@@ -31,12 +52,24 @@ func _ready() -> void:
 	Events.shield_changed.connect(_on_shield_changed)
 	Events.ability_energy_changed.connect(_on_ability_energy_changed)
 	Events.combo_changed.connect(_on_combo_changed)
+	_rng.randomize()
+	Events.risk_changed.connect(_on_risk_changed)
+	Events.boss_spawned.connect(_on_boss_spawned)
+	Events.boss_health_changed.connect(_on_boss_health_changed)
+	Events.cards_offered.connect(_on_cards_offered)
+	Events.room_started.connect(_on_room_started)
 	Events.run_started.connect(_on_run_started)
 	Events.run_ended.connect(_on_run_ended)
 	restart_button.pressed.connect(func() -> void:
+		Sfx.play("ui_confirm")
 		claim_panel.visible = false
 		restart_requested.emit())
-	resume_button.pressed.connect(func() -> void: get_tree().paused = false)
+	resume_button.pressed.connect(func() -> void:
+		Sfx.play("ui_confirm")
+		get_tree().paused = false)
+	quit_button.pressed.connect(_on_quit_pressed)
+	Events.enemy_weakened.connect(func() -> void:
+		_hint("munch", "Green perils are weakened — MUNCH to eat one and heal"))
 	music_button.pressed.connect(_on_music_pressed)
 	_refresh_music_button()
 
@@ -51,10 +84,54 @@ func _refresh_music_button() -> void:
 
 
 func _process(_delta: float) -> void:
-	pause_panel.visible = get_tree().paused
+	# The card picker also pauses, so do not stack the two overlays.
+	var show_pause := get_tree().paused and not card_panel.visible
+	if show_pause and not pause_panel.visible:
+		_refresh_inventory()
+	pause_panel.visible = show_pause
+
+
+func _on_quit_pressed() -> void:
+	Sfx.play("ui_confirm")
+	# The run is already checkpointed per room, so quitting is non-destructive.
+	get_tree().paused = false
+	get_tree().change_scene_to_file("res://scenes/title.tscn")
+
+
+## Pause doubles as the inventory screen (§23): what you are actually holding.
+func _refresh_inventory() -> void:
+	var entries := GameManager.card_list()
+	if entries.is_empty():
+		inventory_label.text = "No endorsements held."
+		return
+	var lines: Array[String] = []
+	for entry in entries:
+		var card: PolicyCard = entry["card"]
+		var stacks := int(entry["stacks"])
+		var suffix := " x%d" % stacks if stacks > 1 else ""
+		lines.append("• %s%s" % [card.title, suffix])
+	inventory_label.text = "\n".join(lines)
+
+
+## One-time contextual teaching, so no tutorial level is needed (§32).
+func _hint(id: String, text: String) -> void:
+	var profile: Dictionary = SaveManager.get_section("profile")
+	var seen: Array = profile.get("hints_seen", [])
+	if id in seen:
+		return
+	seen.append(id)
+	profile["hints_seen"] = seen
+	SaveManager.set_section("profile", profile)
+	hint_label.text = text
+	var tween := create_tween()
+	tween.tween_property(hint_label, "modulate:a", 1.0, 0.3)
+	tween.tween_interval(3.4)
+	tween.tween_property(hint_label, "modulate:a", 0.0, 0.6)
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if card_panel.visible:
+		return
 	if event.is_action_pressed("pause") and GameManager.run_active:
 		get_tree().paused = not get_tree().paused
 
@@ -108,7 +185,131 @@ func _on_ability_energy_changed(current: float, maximum: float) -> void:
 	ability_label.modulate = Color.WHITE if ready else Color(1, 1, 1, 0.4)
 
 
+## Room-entry banner: names the Risk Zone, then gets out of the way fast.
+func _on_room_started(path: String) -> void:
+	boss_box.visible = false
+	var entry := LevelData.entry(path)
+	banner_name.text = String(entry.get("name", "UNSURVEYED RISK"))
+	banner_sub.text = String(entry.get("subtitle", ""))
+	banner_room.text = "ROOM %d / %d" % [
+		GameManager.room_index + 1, GameManager.room_sequence.size()]
+	_hint("double_jump", "Tap JUMP again in mid-air to double jump")
+	if _banner_tween != null and _banner_tween.is_valid():
+		_banner_tween.kill()
+	banner.modulate.a = 0.0
+	banner.position.y = 12.0
+	_banner_tween = create_tween()
+	_banner_tween.set_parallel(true)
+	_banner_tween.tween_property(banner, "modulate:a", 1.0, 0.28)
+	_banner_tween.tween_property(banner, "position:y", 0.0, 0.35)
+	_banner_tween.set_parallel(false)
+	_banner_tween.tween_interval(1.5)
+	_banner_tween.tween_property(banner, "modulate:a", 0.0, 0.5)
+
+
+func _on_boss_spawned(title: String, maximum: int) -> void:
+	_hint("boss", "Every attack telegraphs. Punish the stun that follows.")
+	boss_name.text = title
+	boss_bar.max_value = maximum
+	boss_bar.value = maximum
+	boss_box.visible = true
+	boss_box.modulate.a = 0.0
+	var tween := create_tween()
+	tween.tween_property(boss_box, "modulate:a", 1.0, 0.5)
+
+
+func _on_boss_health_changed(current: int, maximum: int) -> void:
+	boss_bar.max_value = maximum
+	boss_bar.value = current
+	if current <= 0:
+		var tween := create_tween()
+		tween.tween_property(boss_box, "modulate:a", 0.0, 0.8)
+		tween.tween_callback(func() -> void: boss_box.visible = false)
+
+
+func _on_risk_changed(value: float) -> void:
+	risk_bar.value = value
+	risk_label.text = "RISK: %s" % ClaimReport.risk_label(value)
+	risk_label.modulate = Color(1, 1, 1) if value < 0.5 else Color(1, 0.6, 0.6)
+
+
+## Card offer between rooms (§9). Pauses so the choice is unhurried, and the
+## three options are big touch targets rather than a scrolling list (§9, §23).
+func _on_cards_offered(cards: Array) -> void:
+	for child in card_row.get_children():
+		child.queue_free()
+	if cards.is_empty():
+		Events.card_chosen.emit("")
+		return
+	for card in cards:
+		card_row.add_child(_build_card_button(card))
+	var repair := _build_patch_button()
+	if repair != null:
+		card_row.add_child(repair)
+	card_panel.visible = true
+	get_tree().paused = true
+	Sfx.play("ui_move")
+
+
+## Spend Premiums instead of taking an endorsement (§15 shop, compressed into
+## the same decision so it is one screen rather than two).
+func _build_patch_button() -> Button:
+	if GameManager.coverage >= GameManager.max_coverage:
+		return null
+	var cost := PATCH_COST
+	var button := Button.new()
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.custom_minimum_size = Vector2(0, 200)
+	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	button.add_theme_font_size_override("font_size", 17)
+	var affordable := GameManager.currency >= cost
+	button.text = "\n".join([
+		"PATCH UP", "",
+		"Restore %d Coverage instead of taking an endorsement." % PATCH_HEAL,
+		"", "COST: %d PREMIUMS" % cost])
+	button.disabled = not affordable
+	button.modulate = Color(0.6, 1.0, 0.7) if affordable else Color(0.5, 0.5, 0.5)
+	button.pressed.connect(_on_patch_picked)
+	return button
+
+
+func _on_patch_picked() -> void:
+	if not GameManager.spend_currency(PATCH_COST):
+		return
+	GameManager.heal(PATCH_HEAL)
+	Sfx.play("pickup_card")
+	card_panel.visible = false
+	get_tree().paused = false
+	Events.card_chosen.emit("")
+
+
+func _build_card_button(card: PolicyCard) -> Button:
+	var button := Button.new()
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.custom_minimum_size = Vector2(0, 200)
+	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	button.add_theme_font_size_override("font_size", 17)
+	var lines := [card.title.to_upper(), "", card.text]
+	if card.is_exclusion:
+		lines.append("")
+		lines.append("EXCLUSION — " + card.downside)
+	lines.append("")
+	lines.append("%s · %s" % [card.category.to_upper(), card.rarity_name()])
+	button.text = "\n".join(lines)
+	button.modulate = Color(1.0, 0.72, 0.55) if card.is_exclusion else card.rarity_color()
+	button.pressed.connect(_on_card_picked.bind(card.id))
+	return button
+
+
+func _on_card_picked(card_id: String) -> void:
+	Sfx.play("pickup_card")
+	card_panel.visible = false
+	get_tree().paused = false
+	Events.card_chosen.emit(card_id)
+
+
 func _on_run_started() -> void:
+	card_panel.visible = false
 	claim_panel.visible = false
 
 
@@ -118,25 +319,21 @@ func _on_run_ended(report: Dictionary) -> void:
 
 
 func _format_report(report: Dictionary) -> String:
+	var prose := ClaimReport.compose(report, _rng)
 	return "\n".join([
-		"Cause of loss: %s" % report.get("cause_of_loss", "unknown peril"),
-		"Rooms completed: %d" % report.get("rooms_completed", 0),
-		"Enemies defeated: %d" % report.get("enemies_defeated", 0),
-		"Best streak: x%d" % report.get("best_combo", 0),
-		"Damage taken: %d" % report.get("damage_taken", 0),
-		"Estimated property damage: $%s" % _with_commas(report.get("estimated_property_damage", 0)),
+		"Cause of loss:  %s" % prose["cause"],
+		"Contributing factor:  %s" % prose["factor"],
 		"",
-		"Claim status: %s" % report.get("claim_status", "Under review."),
+		"Policy:  %s" % report.get("deductible", "STANDARD DEDUCTIBLE"),
+		"Final risk assessment:  %s" % ClaimReport.risk_label(report.get("risk", 0.0)),
+		"Rooms surveyed:  %d          Perils neutralised:  %d" % [
+			report.get("rooms_completed", 0), report.get("enemies_defeated", 0)],
+		"Parties consumed:  %d          Best streak:  x%d" % [
+			report.get("enemies_consumed", 0), report.get("best_combo", 0)],
+		"Endorsements held:  %d          Premiums collected:  %d" % [
+			report.get("cards", 0), report.get("premiums_earned", 0)],
+		"Estimated property damage:  $%s" % ClaimReport.money(
+			report.get("estimated_property_damage", 0)),
+		"",
+		"CLAIM STATUS:  %s" % prose["status"],
 	])
-
-
-func _with_commas(value: int) -> String:
-	var text := str(value)
-	var result := ""
-	var count := 0
-	for i in range(text.length() - 1, -1, -1):
-		result = text[i] + result
-		count += 1
-		if count % 3 == 0 and i > 0:
-			result = "," + result
-	return result

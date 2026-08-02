@@ -1,0 +1,58 @@
+[gd_scene load_steps=6 format=3 uid="uid://witlawsuit0001"]
+
+[ext_resource type="Script" path="res://scripts/enemies/lawsuit_launcher.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/fireball.tscn" id="2_shot"]
+[ext_resource type="PackedScene" path="res://scenes/rooms/premium.tscn" id="3_premium"]
+
+[sub_resource type="RectangleShape2D" id="rect_body"]
+size = Vector2(40, 44)
+
+[sub_resource type="RectangleShape2D" id="rect_hit"]
+size = Vector2(44, 48)
+
+[node name="LawsuitLauncher" type="CharacterBody2D"]
+collision_layer = 4
+collision_mask = 1
+script = ExtResource("1_script")
+max_health = 40
+contact_damage = 10
+currency_reward = 8
+defeat_source = "served by a Lawsuit Launcher"
+premium_scene = ExtResource("3_premium")
+premium_drops = 3
+death_color = Color(0.7, 0.72, 0.85, 1)
+projectile_scene = ExtResource("2_shot")
+
+[node name="Visual" type="Node2D" parent="."]
+
+[node name="Base" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(-20, 22, -16, -8, 16, -8, 20, 22)
+color = Color(0.36, 0.38, 0.5, 1)
+
+[node name="Plate" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(-18, 4, 18, 4, 18, 12, -18, 12)
+color = Color(0.62, 0.66, 0.8, 1)
+
+[node name="Barrel" type="Node2D" parent="Visual"]
+position = Vector2(0, -10)
+
+[node name="Tube" type="Polygon2D" parent="Visual/Barrel"]
+polygon = PackedVector2Array(-8, -8, 26, -14, 26, -2, -8, 4)
+color = Color(0.28, 0.3, 0.42, 1)
+
+[node name="Muzzle" type="Polygon2D" parent="Visual/Barrel"]
+polygon = PackedVector2Array(22, -15, 30, -16, 30, 0, 22, -1)
+color = Color(0.9, 0.85, 0.6, 1)
+
+[node name="Collision" type="CollisionShape2D" parent="."]
+shape = SubResource("rect_body")
+
+[node name="Hitbox" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="Collision" type="CollisionShape2D" parent="Hitbox"]
+shape = SubResource("rect_hit")
+
+[node name="OnScreen" type="VisibleOnScreenNotifier2D" parent="."]
+rect = Rect2(-40, -40, 80, 80)

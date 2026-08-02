@@ -10,6 +10,19 @@ signal shield_changed(active: bool)
 signal charge_changed(ratio: float)
 signal ability_energy_changed(current: float, maximum: float)
 signal combo_changed(count: int, ratio: float)
+signal risk_changed(value: float)
+
+# Teaching moments — the HUD turns these into one-time hints
+signal enemy_weakened
+
+# Boss encounters
+signal boss_spawned(title: String, max_health: int)
+signal boss_health_changed(current: int, maximum: int)
+signal boss_defeated
+
+# Policy Cards
+signal cards_offered(cards: Array)
+signal card_chosen(card_id: String)
 
 # Economy / upgrades
 signal currency_changed(amount: int)
