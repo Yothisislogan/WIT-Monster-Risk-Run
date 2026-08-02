@@ -3,19 +3,6 @@ extends Node
 ## saves a checkpoint after every completed room so mobile players can close
 ## the app and resume (GAME_DESIGN.md §5, §17, §24).
 
-## Pool of handcrafted room modules. Each run shuffles the pool into a
-## sequence (§12: randomize order, never individual platforms). The
-## sequence is saved with the run so resuming never re-rolls a room (§17).
-const ROOM_POOL: Array[String] = [
-	"res://scenes/rooms/test_room_a.tscn",
-	"res://scenes/rooms/test_room_b.tscn",
-	"res://scenes/rooms/test_room_c.tscn",
-	"res://scenes/rooms/test_room_d.tscn",
-	"res://scenes/rooms/test_room_e.tscn",
-]
-## Always the last room of a run, when it exists.
-const BOSS_ROOM := "res://scenes/rooms/boss_inferno_adjuster.tscn"
-
 const BASE_COVERAGE := 100
 const MAX_ABILITY_ENERGY := 100.0
 ## Coverage fraction at or below which the HUD and audio warn you.
@@ -56,8 +43,9 @@ var ability_energy: float = 0.0    # fuels the equipped boss ability
 ## beating a boss adds its power to the list and you cycle between them.
 var abilities: Array = [Abilities.FLAME_DRAFT]
 var ability_index: int = 0
-var room_sequence: Array = []
-var room_index: int = 0
+## The run's route (§5, §12, §15). Replaces the old flat room_sequence: a run
+## is now a graph you choose your way through rather than a fixed queue.
+var map: ClaimMap = null
 var run_active: bool = false
 var last_damage_source: String = "unknown peril"
 
@@ -167,6 +155,49 @@ func add_card(id: String) -> void:
 	Events.upgrade_gained.emit(id)
 
 
+func exclusion_count() -> int:
+	var total := 0
+	for id in held_cards.keys():
+		var card := CardDb.by_id(String(id))
+		if card != null and card.is_exclusion:
+			total += int(held_cards[id])
+	return total
+
+
+## Strikes one Exclusion off the policy and returns its title, or "" if there
+## was nothing to strike. Sites pay for this; it is the only way to undo one.
+func remove_one_exclusion() -> String:
+	for id in held_cards.keys():
+		var card := CardDb.by_id(String(id))
+		if card == null or not card.is_exclusion:
+			continue
+		var stacks := int(held_cards[id]) - 1
+		if stacks <= 0:
+			held_cards.erase(id)
+		else:
+			held_cards[id] = stacks
+		_recompute_modifiers()
+		max_coverage = _computed_max_coverage()
+		coverage = clampi(coverage, 1, max_coverage)
+		revives_left = int(stat("revives"))
+		Events.coverage_changed.emit(coverage, max_coverage)
+		return card.title
+	return ""
+
+
+## Raises the policy limit and hands over the difference, so an upgrade is
+## felt immediately rather than only after the next heal.
+func add_max_coverage(amount: int) -> void:
+	if amount <= 0:
+		return
+	_mods["max_coverage"] = float(_mods.get("max_coverage", 0.0)) + float(amount)
+	var new_max := _computed_max_coverage()
+	coverage += maxi(new_max - max_coverage, 0)
+	max_coverage = new_max
+	coverage = clampi(coverage, 1, max_coverage)
+	Events.coverage_changed.emit(coverage, max_coverage)
+
+
 func card_list() -> Array:
 	var out: Array = []
 	for id in held_cards.keys():
@@ -218,21 +249,6 @@ func damage_taken_factor() -> float:
 
 # --- Run lifecycle ---------------------------------------------------------
 
-## Rooms drawn per run. Fewer than the pool, so two runs rarely share a
-## sequence — variety without making a run longer (§5 run length).
-const ROOMS_PER_RUN := 3
-
-
-func _build_sequence() -> Array:
-	var pool: Array = ROOM_POOL.duplicate()
-	pool.shuffle()
-	var sequence: Array = pool.slice(0, mini(ROOMS_PER_RUN, pool.size()))
-	# The boss closes every run once its room exists.
-	if ResourceLoader.exists(BOSS_ROOM):
-		sequence.append(BOSS_ROOM)
-	return sequence
-
-
 func start_new_run(chosen_deductible: String = "standard") -> void:
 	deductible = chosen_deductible if DEDUCTIBLES.has(chosen_deductible) else "standard"
 	held_cards.clear()
@@ -249,8 +265,7 @@ func start_new_run(chosen_deductible: String = "standard") -> void:
 	combo = 0
 	combo_timer = 0.0
 	best_combo = 0
-	room_sequence = _build_sequence()
-	room_index = 0
+	map = ClaimMap.generate(_rng.randi())
 	run_active = true
 	last_damage_source = "unknown peril"
 	stats = {"rooms_completed": 0, "damage_taken": 0, "enemies_defeated": 0,
@@ -284,14 +299,9 @@ func resume_run() -> bool:
 	revives_left = int(run.get("revives_left", 0))
 	best_combo = int(run.get("best_combo", 0))
 	_reset_combo()
-	# Drop any rooms that no longer exist (renamed between builds).
-	var known := ROOM_POOL.duplicate()
-	known.append(BOSS_ROOM)
-	room_sequence = run.get("room_sequence", []).filter(
-			func(p: Variant) -> bool: return p in known and ResourceLoader.exists(String(p)))
-	if room_sequence.is_empty():
-		room_sequence = _build_sequence()
-	room_index = clampi(int(run.get("room_index", 0)), 0, room_sequence.size() - 1)
+	# The map is rebuilt from its seed rather than trusting the stored graph,
+	# so a save written before a generation change still opens (§17, §24).
+	map = ClaimMap.from_dict(run.get("map", {}))
 	stats = run.get("stats", stats)
 	run_active = true
 	Events.run_started.emit()
@@ -308,26 +318,62 @@ func _emit_state() -> void:
 	Events.risk_changed.emit(risk)
 
 
+# --- Route ------------------------------------------------------------------
+
+func current_node() -> Dictionary:
+	return map.node(map.current_id) if map != null else {}
+
+
+func current_kind() -> int:
+	return map.kind_of(map.current_id) if map != null else int(ClaimMap.Kind.PERIL)
+
+
 func current_room_path() -> String:
-	return room_sequence[room_index]
+	return String(current_node().get("room", ""))
 
 
 func is_final_room() -> bool:
-	return room_index >= room_sequence.size() - 1
+	return map != null and current_kind() == int(ClaimMap.Kind.BOSS) \
+			and map.current_act() == ClaimMap.ACTS - 1
 
 
-## Called when the exit of a room is reached.
+## Sites the player may route to from here. Empty while a site is in progress.
+func available_nodes() -> Array:
+	return map.available if map != null else []
+
+
+## Commit to a site. False when the tap was stale, so the map screen can never
+## desync the run by double-firing.
+func enter_node(id: int) -> bool:
+	if map == null or not map.enter(id):
+		return false
+	Events.node_entered.emit(id, map.kind_of(id))
+	return true
+
+
+## Progress through the route, for the HUD banner.
+func route_progress() -> Vector2i:
+	if map == null:
+		return Vector2i(0, 0)
+	return Vector2i(map.visited.size(), ClaimMap.ACTS * (ClaimMap.CHOICE_ROWS + 1))
+
+
+## Called when a site is finished — a room's exit reached, or a Claim Event
+## answered. Opens the next row of the map.
 func complete_room() -> void:
+	if map == null:
+		return
 	stats["rooms_completed"] = int(stats["rooms_completed"]) + 1
 	Sfx.play("room_clear")
-	# Clearing a room without topping up is a gamble, and the meter notices.
+	# Clearing a site without topping up is a gamble, and the meter notices.
 	if not _healed_this_room:
 		add_risk(0.06)
 	Events.room_completed.emit(current_room_path())
-	if room_index + 1 >= room_sequence.size():
+	var was_final := is_final_room()
+	map.complete_current()
+	if was_final or map.available.is_empty():
 		end_run(true)
 		return
-	room_index += 1
 	save_checkpoint()
 
 
@@ -357,8 +403,7 @@ func save_checkpoint() -> void:
 		"held_cards": held_cards,
 		"revives_left": revives_left,
 		"best_combo": best_combo,
-		"room_sequence": room_sequence,
-		"room_index": room_index,
+		"map": map.to_dict() if map != null else {},
 		"stats": stats,
 	})
 
@@ -433,6 +478,16 @@ func add_currency(amount: int) -> void:
 	var gained := maxi(int(round(float(amount) * combo_multiplier() * premium_factor())), 1)
 	currency += gained
 	stats["premiums_earned"] = int(stats["premiums_earned"]) + gained
+	Events.currency_changed.emit(currency)
+
+
+## Premiums awarded by a site, not earned from a kill: no combo multiplier and
+## no Risk scaling, because neither had anything to do with it.
+func add_premiums_flat(amount: int) -> void:
+	if amount <= 0:
+		return
+	currency += amount
+	stats["premiums_earned"] = int(stats["premiums_earned"]) + amount
 	Events.currency_changed.emit(currency)
 
 

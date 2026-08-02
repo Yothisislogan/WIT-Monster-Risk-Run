@@ -280,8 +280,8 @@ func _on_room_started(path: String) -> void:
 	var entry := LevelData.entry(path)
 	banner_name.text = String(entry.get("name", "UNSURVEYED RISK"))
 	banner_sub.text = String(entry.get("subtitle", ""))
-	banner_room.text = "ROOM %d / %d" % [
-		GameManager.room_index + 1, GameManager.room_sequence.size()]
+	var progress := GameManager.route_progress()
+	banner_room.text = "SITE %d / %d" % [progress.x, progress.y]
 	_hint("double_jump", "Tap JUMP again in mid-air to double jump")
 	if _banner_tween != null and _banner_tween.is_valid():
 		_banner_tween.kill()

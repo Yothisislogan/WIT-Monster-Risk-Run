@@ -23,12 +23,47 @@ func _ready() -> void:
 	hud.restart_requested.connect(_on_restart_requested)
 	Events.run_ended.connect(_on_run_ended)
 	Events.card_chosen.connect(_on_card_chosen)
+	Events.node_chosen.connect(_enter_node)
+	Events.site_resolved.connect(_on_site_resolved)
 	Settings.apply_all()
 	# Normally the title screen has already started or resumed the run; this
 	# keeps main.tscn runnable on its own for quick iteration.
 	if not GameManager.run_active and not GameManager.resume_run():
 		GameManager.start_new_run()
-	_load_room(GameManager.current_room_path())
+	_resume_route()
+
+
+## Pick up wherever the route is: mid-site after a reload, or at a fork.
+func _resume_route() -> void:
+	if GameManager.map.current_id >= 0 and GameManager.available_nodes().is_empty():
+		_open_current_site()
+		return
+	_open_map()
+
+
+func _open_map() -> void:
+	Events.map_opened.emit(GameManager.available_nodes())
+
+
+## A site is either a room you play or a screen you answer. Combat loads the
+## room; everything else is presented by the HUD, which answers on
+## Events.site_resolved.
+func _enter_node(id: int) -> void:
+	if not GameManager.enter_node(id):
+		return
+	_open_current_site()
+
+
+func _open_current_site() -> void:
+	var kind := GameManager.current_kind()
+	if ClaimMap.is_combat(kind):
+		_load_room(GameManager.current_room_path())
+		return
+	Events.site_opened.emit(GameManager.map.current_id, kind)
+
+
+func _on_site_resolved() -> void:
+	_finish_site()
 
 
 func _physics_process(delta: float) -> void:
@@ -74,14 +109,20 @@ func _load_room(path: String) -> void:
 
 
 func _on_room_exit_reached() -> void:
+	_finish_site()
+
+
+func _finish_site() -> void:
+	var was_combat := ClaimMap.is_combat(GameManager.current_kind())
 	GameManager.complete_room()
 	if not GameManager.run_active:
 		return
-	# Offer an endorsement before the next room (§9). The HUD pauses while
-	# the choice is open and answers on Events.card_chosen.
-	var offers := GameManager.draw_card_offers(3)
+	# An endorsement is the reward for a fight (§9), so the sites you route
+	# through to avoid fighting do not also hand you cards. The HUD pauses
+	# while the choice is open and answers on Events.card_chosen.
+	var offers := GameManager.draw_card_offers(3) if was_combat else []
 	if offers.is_empty():
-		_load_room(GameManager.current_room_path())
+		_open_map()
 		return
 	_awaiting_card = true
 	Events.cards_offered.emit(offers)
@@ -94,7 +135,7 @@ func _on_card_chosen(card_id: String) -> void:
 	if card_id != "":
 		GameManager.add_card(card_id)
 	if GameManager.run_active:
-		_load_room(GameManager.current_room_path())
+		_open_map()
 
 
 func _on_run_ended(report: Dictionary) -> void:
@@ -108,4 +149,4 @@ func _on_run_ended(report: Dictionary) -> void:
 func _on_restart_requested() -> void:
 	_awaiting_card = false
 	GameManager.start_new_run(GameManager.deductible)
-	_load_room(GameManager.current_room_path())
+	_open_map()

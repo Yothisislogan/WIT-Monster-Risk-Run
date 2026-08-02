@@ -65,6 +65,30 @@ const KIND_NAMES := {
 	Kind.BOSS: "CATASTROPHE",
 }
 
+## Short label for the map screen's touch targets. A 96px circle on a phone
+## fits about six characters and nothing else.
+const KIND_SHORT := {
+	Kind.PERIL: "FIGHT",
+	Kind.HIGH_RISK: "HIGH",
+	Kind.OFFICE: "SHOP",
+	Kind.CLAIM_EVENT: "EVENT",
+	Kind.MINI_BOSS: "SENIOR",
+	Kind.SALVAGE: "REST",
+	Kind.BOSS: "BOSS",
+}
+
+## Colour is the fast read, the label is the confirmation. Never colour alone
+## (§7 colourblind-safe): every node carries its text too.
+const KIND_COLORS := {
+	Kind.PERIL: Color(0.72, 0.78, 0.92),
+	Kind.HIGH_RISK: Color(1.0, 0.55, 0.4),
+	Kind.OFFICE: Color(0.55, 0.9, 0.65),
+	Kind.CLAIM_EVENT: Color(0.95, 0.85, 0.45),
+	Kind.MINI_BOSS: Color(0.85, 0.6, 1.0),
+	Kind.SALVAGE: Color(0.5, 0.85, 0.95),
+	Kind.BOSS: Color(1.0, 0.35, 0.3),
+}
+
 ## One-line description shown under a node on the map screen.
 const KIND_BLURBS := {
 	Kind.PERIL: "Routine exposure. Survey and move on.",
@@ -103,6 +127,7 @@ func _build(map_seed: int) -> void:
 	for act in ACTS:
 		_carve_act(act)
 	_assign_kinds()
+	_assign_rooms()
 	_link_acts()
 	visited.clear()
 	current_id = -1
@@ -233,6 +258,40 @@ func _pick_kind(_act: int, row: int, id: int, used: Dictionary) -> int:
 	return int(Kind.PERIL)
 
 
+## Every combat node gets a room scene now, not when it is entered, so the map
+## screen can name the zone you are routing toward — the choice is only real
+## if you can see what you are choosing.
+func _assign_rooms() -> void:
+	for act in ACTS:
+		# Shuffle per act and deal without replacement, so a single act never
+		# repeats a room until the pool is exhausted.
+		var bag: Array = LevelData.COMBAT_ROOMS.duplicate()
+		_shuffle(bag)
+		var next := 0
+		for row in CHOICE_ROWS + 1:
+			for id in _row_ids(act, row):
+				var kind := int(nodes[id]["kind"])
+				if kind == int(Kind.BOSS):
+					nodes[id]["room"] = LevelData.boss_room_for(act)
+				elif is_combat(kind):
+					if next >= bag.size():
+						_shuffle(bag)
+						next = 0
+					nodes[id]["room"] = String(bag[next])
+					next += 1
+
+
+## Fisher-Yates against the map's own generator, because Array.shuffle() uses
+## the global RNG and would make the map depend on everything else that has
+## rolled a number this session — the seed has to be the whole story (§17).
+func _shuffle(list: Array) -> void:
+	for i in range(list.size() - 1, 0, -1):
+		var j := _rng.randi_range(0, i)
+		var swap: Variant = list[i]
+		list[i] = list[j]
+		list[j] = swap
+
+
 ## Each act's boss opens the next act's first row.
 func _link_acts() -> void:
 	for act in range(ACTS - 1):
@@ -291,6 +350,14 @@ static func kind_name(kind: int) -> String:
 
 static func kind_blurb(kind: int) -> String:
 	return String(KIND_BLURBS.get(kind, ""))
+
+
+static func kind_short(kind: int) -> String:
+	return String(KIND_SHORT.get(kind, "SITE"))
+
+
+static func kind_color(kind: int) -> Color:
+	return KIND_COLORS.get(kind, Color(0.8, 0.8, 0.8))
 
 
 static func is_combat(kind: int) -> bool:

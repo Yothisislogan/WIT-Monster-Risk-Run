@@ -30,6 +30,14 @@ signal card_chosen(card_id: String)
 signal currency_changed(amount: int)
 signal upgrade_gained(upgrade_id: String)
 
+# Claim Map (§5, §15): routing between sites
+signal map_opened(available: Array)
+signal node_chosen(node_id: int)
+signal node_entered(node_id: int, kind: int)
+## A non-combat site: the HUD presents it and answers with site_resolved.
+signal site_opened(node_id: int, kind: int)
+signal site_resolved
+
 # Run / room flow
 signal room_started(room_path: String)
 signal room_completed(room_path: String)

@@ -43,12 +43,35 @@ const ROOMS := {
 	},
 }
 
+## Room scenes a combat node can draw. Kept here rather than in GameManager so
+## that "what rooms exist" and "what each room is called" are one fact in one
+## file (§29 data-driven resources).
+const COMBAT_ROOMS: Array[String] = [
+	"res://scenes/rooms/test_room_a.tscn",
+	"res://scenes/rooms/test_room_b.tscn",
+	"res://scenes/rooms/test_room_c.tscn",
+	"res://scenes/rooms/test_room_d.tscn",
+	"res://scenes/rooms/test_room_e.tscn",
+]
+
+## One per act. Falls back to the last entry while later bosses are unbuilt,
+## so adding a boss scene is a one-line change here.
+const BOSS_ROOMS: Array[String] = [
+	"res://scenes/rooms/boss_inferno_adjuster.tscn",
+]
+
 const FALLBACK := {
 	"name": "UNSURVEYED RISK",
 	"subtitle": "No inspection on file",
 	"music": "blaze_borough",
 	"backdrop": Color(0.2, 0.24, 0.38),
 }
+
+
+static func boss_room_for(act: int) -> String:
+	if BOSS_ROOMS.is_empty():
+		return ""
+	return BOSS_ROOMS[mini(act, BOSS_ROOMS.size() - 1)]
 
 
 static func key_for(scene_path: String) -> String:
