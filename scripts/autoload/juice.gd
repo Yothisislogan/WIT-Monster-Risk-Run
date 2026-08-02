@@ -16,6 +16,8 @@ var _hit_stop_active: bool = false
 
 var _pool: Array[CPUParticles2D] = []
 var _pool_index: int = 0
+var _numbers: Array[Label] = []
+var _number_index: int = 0
 
 
 func _ready() -> void:
@@ -30,6 +32,14 @@ func _ready() -> void:
 		particles.top_level = true
 		add_child(particles)
 		_pool.append(particles)
+	for i in 10:
+		var label := Label.new()
+		label.top_level = true
+		label.visible = false
+		label.z_index = 200
+		label.add_theme_font_size_override("font_size", 20)
+		add_child(label)
+		_numbers.append(label)
 
 
 func _process(delta: float) -> void:
@@ -127,6 +137,26 @@ func coin_sparkle(position: Vector2) -> void:
 func shockwave(position: Vector2) -> void:
 	burst(position, 22, Color(1.0, 0.75, 0.3, 0.95), 420.0, 25.0, Vector2.RIGHT, 5.0, 0.4)
 	burst(position, 22, Color(1.0, 0.75, 0.3, 0.95), 420.0, 25.0, Vector2.LEFT, 5.0, 0.4)
+
+
+## Floating damage number. Tells the player their hits are landing and how
+## hard — the difference between a hit registering and a hit feeling good.
+func damage_number(position: Vector2, amount: int, color: Color = Color(1.0, 0.92, 0.45)) -> void:
+	var label := _numbers[_number_index]
+	_number_index = (_number_index + 1) % _numbers.size()
+	label.text = str(amount)
+	label.modulate = color
+	label.scale = Vector2.ONE * 1.5
+	label.visible = true
+	var from := position + Vector2(randf_range(-14.0, 14.0), -26.0)
+	label.global_position = from
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(label, "global_position", from + Vector2(0.0, -52.0), 0.65)
+	tween.tween_property(label, "scale", Vector2.ONE, 0.14)
+	tween.tween_property(label, "modulate:a", 0.0, 0.65).set_delay(0.15)
+	tween.set_parallel(false)
+	tween.tween_callback(func() -> void: label.visible = false)
 
 
 func _acquire() -> CPUParticles2D:

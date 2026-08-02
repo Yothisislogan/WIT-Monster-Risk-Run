@@ -19,6 +19,12 @@ signal restart_requested
 @onready var pause_panel: PanelContainer = %PausePanel
 @onready var resume_button: Button = %ResumeButton
 @onready var music_button: Button = %MusicButton
+@onready var banner: VBoxContainer = %Banner
+@onready var banner_name: Label = %BannerName
+@onready var banner_sub: Label = %BannerSub
+@onready var banner_room: Label = %BannerRoom
+
+var _banner_tween: Tween
 
 
 func _ready() -> void:
@@ -31,6 +37,7 @@ func _ready() -> void:
 	Events.shield_changed.connect(_on_shield_changed)
 	Events.ability_energy_changed.connect(_on_ability_energy_changed)
 	Events.combo_changed.connect(_on_combo_changed)
+	Events.room_started.connect(_on_room_started)
 	Events.run_started.connect(_on_run_started)
 	Events.run_ended.connect(_on_run_ended)
 	restart_button.pressed.connect(func() -> void:
@@ -109,6 +116,26 @@ func _on_ability_energy_changed(current: float, maximum: float) -> void:
 	# because the bar length carries the same information).
 	var ready := current >= GameManager.ABILITY_COST
 	ability_label.modulate = Color.WHITE if ready else Color(1, 1, 1, 0.4)
+
+
+## Room-entry banner: names the Risk Zone, then gets out of the way fast.
+func _on_room_started(path: String) -> void:
+	var entry := LevelData.entry(path)
+	banner_name.text = String(entry.get("name", "UNSURVEYED RISK"))
+	banner_sub.text = String(entry.get("subtitle", ""))
+	banner_room.text = "ROOM %d / %d" % [
+		GameManager.room_index + 1, GameManager.room_sequence.size()]
+	if _banner_tween != null and _banner_tween.is_valid():
+		_banner_tween.kill()
+	banner.modulate.a = 0.0
+	banner.position.y = 12.0
+	_banner_tween = create_tween()
+	_banner_tween.set_parallel(true)
+	_banner_tween.tween_property(banner, "modulate:a", 1.0, 0.28)
+	_banner_tween.tween_property(banner, "position:y", 0.0, 0.35)
+	_banner_tween.set_parallel(false)
+	_banner_tween.tween_interval(1.5)
+	_banner_tween.tween_property(banner, "modulate:a", 0.0, 0.5)
 
 
 func _on_run_started() -> void:

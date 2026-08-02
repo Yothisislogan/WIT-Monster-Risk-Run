@@ -109,6 +109,16 @@ func _ready() -> void:
 	base_sprite_scale = sprite.scale.abs()
 
 
+## Rooms clamp the camera so the void outside the level is never on screen.
+func apply_camera_bounds(bounds: Rect2) -> void:
+	var camera: Camera2D = $Camera
+	camera.limit_left = int(bounds.position.x)
+	camera.limit_top = int(bounds.position.y)
+	camera.limit_right = int(bounds.position.x + bounds.size.x)
+	camera.limit_bottom = int(bounds.position.y + bounds.size.y)
+	camera.reset_smoothing()
+
+
 func _physics_process(delta: float) -> void:
 	_update_timers(delta)
 	_read_action_buffers()

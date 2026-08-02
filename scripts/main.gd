@@ -61,6 +61,7 @@ func _load_room(path: String) -> void:
 	player.global_position = current_room.spawn_point.global_position
 	player.velocity = Vector2.ZERO
 	player.set_physics_process(true)
+	player.apply_camera_bounds(current_room.camera_bounds)
 	_safe_position = current_room.spawn_point.global_position
 	_safe_timer = 0.0
 	Events.room_started.emit(path)

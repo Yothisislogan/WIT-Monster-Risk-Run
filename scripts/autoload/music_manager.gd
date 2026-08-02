@@ -9,16 +9,6 @@ const MUSIC_DIR := "res://assets/audio/music/"
 const FADE_TIME := 0.7
 const SILENT_DB := -60.0
 
-## Room scene basename -> theme. Levels 4 and 5 already have their themes
-## written; they hook up as soon as those Risk Zones exist.
-const ROOM_THEMES := {
-	"test_room_a": "blaze_borough",
-	"test_room_b": "crashway_5000",
-	"test_room_c": "storm_surge_harbor",
-	"test_room_d": "cyber_city",
-	"test_room_e": "liability_land",
-}
-const DEFAULT_THEME := "blaze_borough"
 const VICTORY_CUE := "claim_victory"
 
 var volume: float = 0.7
@@ -49,8 +39,7 @@ func _ready() -> void:
 
 
 func _on_room_started(path: String) -> void:
-	var key := path.get_file().get_basename()
-	play(ROOM_THEMES.get(key, DEFAULT_THEME))
+	play(String(LevelData.entry(path).get("music", "blaze_borough")))
 
 
 func _on_run_ended(_report: Dictionary) -> void:
