@@ -41,6 +41,7 @@ jobs:
           python3 tools/check_scenes.py
           python3 tools/check_inputs.py
           python3 tools/check_movement.py
+          python3 tools/check_aim.py
           python3 tools/check_reachability.py
           python3 tools/check_pickups.py
           python3 tools/check_economy.py

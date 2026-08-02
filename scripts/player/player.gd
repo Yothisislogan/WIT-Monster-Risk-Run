@@ -67,6 +67,18 @@ extends CharacterBody2D
 @export var projectile_damage: int = 10
 @export var charged_damage: int = 30
 
+# --- Aiming (§6: "mild vertical correction toward nearby enemies") ---
+## Holding up, or down in mid-air, tilts the shot. This is the scheme every
+## side-scroller since Contra has used and it costs no new button — move_up
+## was declared in project.godot and read by nothing at all until now.
+@export var aim_tilt_degrees: float = 45.0
+## Auto-assist for everything else. It leans the shot toward a target inside
+## a cone; it deliberately does not home, and the correction cap is what keeps
+## "mild" honest — a shot can never end up travelling backwards.
+@export var aim_assist_range: float = 560.0
+@export var aim_assist_cone_degrees: float = 42.0
+@export var aim_assist_max_correction_degrees: float = 20.0
+
 # --- Damage response ---
 @export var invulnerability_time: float = 0.8
 @export var hurt_knockback: Vector2 = Vector2(260.0, -300.0)
@@ -450,7 +462,50 @@ func _fire(damage: int, pierce: bool) -> void:
 	fire_timer = fire_cooldown * GameManager.factor("fire_rate_mult")
 	var scaled := maxi(int(round(float(damage) * GameManager.factor("damage_mult"))), 1)
 	var projectile: Node2D = projectile_pool.acquire()
-	projectile.launch(muzzle.global_position, facing, scaled, pierce)
+	projectile.launch(muzzle.global_position, aim_direction(), scaled, pierce)
+
+
+## Where the next shot goes. Explicit aim always wins over the assist, so a
+## player who is aiming is never fought by the game for the barrel.
+func aim_direction() -> Vector2:
+	var forward := Vector2(facing, 0.0)
+	var tilt := 0.0
+	if Input.is_action_pressed("move_up"):
+		tilt = -1.0
+	elif Input.is_action_pressed("move_down") and not is_on_floor():
+		tilt = 1.0
+	if tilt != 0.0:
+		# Up or down with no horizontal input fires straight along that axis.
+		if is_zero_approx(Input.get_axis("move_left", "move_right")):
+			return Vector2(0.0, tilt)
+		return forward.rotated(deg_to_rad(aim_tilt_degrees) * tilt * float(facing))
+	return _assisted(forward)
+
+
+func _assisted(forward: Vector2) -> Vector2:
+	var origin := muzzle.global_position
+	var cone := deg_to_rad(aim_assist_cone_degrees)
+	var best: Node2D = null
+	var best_distance := aim_assist_range
+	for node in get_tree().get_nodes_in_group("enemies"):
+		if not is_instance_valid(node):
+			continue
+		var enemy := node as Node2D
+		var offset := enemy.global_position - origin
+		var distance := offset.length()
+		# Nearest target inside the cone wins: predictable, and it means
+		# backing away from a swarm re-targets rather than losing the lock.
+		if distance >= best_distance or distance < 1.0:
+			continue
+		if absf(forward.angle_to(offset)) > cone:
+			continue
+		best = enemy
+		best_distance = distance
+	if best == null:
+		return forward
+	var limit := deg_to_rad(aim_assist_max_correction_degrees)
+	var to_target := best.global_position - origin
+	return forward.rotated(clampf(forward.angle_to(to_target), -limit, limit))
 
 
 ## The equipped boss ability (§12). Which one fires is data rather than a
@@ -473,7 +528,7 @@ func _process_ability() -> void:
 ## Flame Draft: costs ability energy, pierces, and ignites what it hits.
 func _fire_flame_draft() -> void:
 	var flame: Node2D = flame_pool.acquire()
-	flame.launch(muzzle.global_position, facing,
+	flame.launch(muzzle.global_position, aim_direction(),
 			int(round(float(flame_damage) * GameManager.factor("damage_mult"))), true)
 	Sfx.play("flame_draft")
 	Juice.shake(5.0, 0.2)
