@@ -66,8 +66,18 @@ extends CharacterBody2D
 @export var invulnerability_time: float = 0.8
 @export var hurt_knockback: Vector2 = Vector2(260.0, -300.0)
 
-# --- Flame Draft (equipped boss ability, §12) ---
+# --- Flame Draft (absorbed boss ability, §12) ---
 @export var flame_damage: int = 25
+
+# --- Impact Dash (absorbed boss ability, §12) ---
+## Longer, faster and heavier than the normal dash: it damages everything it
+## passes through instead of just repositioning you.
+@export var impact_dash_speed: float = 980.0
+@export var impact_dash_duration: float = 0.26
+@export var impact_damage: int = 35
+## MELTDOWN CHARGE (§14): with Flame Draft also held, the charge ignites.
+@export var impact_burn_damage: int = 5
+@export var impact_burn_ticks: int = 4
 
 @onready var sprite: Node2D = $Sprite
 @onready var muzzle: Marker2D = $Muzzle
@@ -76,6 +86,7 @@ extends CharacterBody2D
 @onready var munch_area: Area2D = $MunchArea
 @onready var stomp_area: Area2D = $StompArea
 @onready var pound_area: Area2D = $PoundArea
+@onready var impact_area: Area2D = $ImpactArea
 
 var facing: int = 1
 var coyote_timer: float = 0.0
@@ -93,6 +104,11 @@ var air_dash_available: bool = true
 
 var pounding: bool = false
 var pound_hang_timer: float = 0.0
+
+var impact_dashing: bool = false
+var impact_timer: float = 0.0
+## Instance ids already hit by the current charge, so one pass is one hit.
+var _impact_hit: Array[int] = []
 
 var charging: bool = false
 var charge_timer: float = 0.0
@@ -134,7 +150,9 @@ func _physics_process(delta: float) -> void:
 	_update_timers(delta)
 	_read_action_buffers()
 
-	if dashing:
+	if impact_dashing:
+		_process_impact_dash(delta)
+	elif dashing:
 		_process_dash(delta)
 	elif pounding:
 		_process_pound(delta)
@@ -401,18 +419,84 @@ func _fire(damage: int, pierce: bool) -> void:
 	projectile.launch(muzzle.global_position, facing, scaled, pierce)
 
 
-## Flame Draft: costs ability energy, pierces, and ignites what it hits.
+## The equipped boss ability (§12). Which one fires is data rather than a
+## hard-coded branch: GameManager owns what has been absorbed and what is up,
+## so a third boss only needs an entry in Abilities plus a case here.
 func _process_ability() -> void:
-	if not Input.is_action_just_pressed("special"):
+	if Input.is_action_just_pressed("cycle_ability"):
+		GameManager.cycle_ability()
+	if not Input.is_action_just_pressed("special") or impact_dashing:
 		return
 	if not GameManager.try_spend_ability_energy():
 		return
+	match GameManager.current_ability():
+		Abilities.IMPACT_DASH:
+			_start_impact_dash()
+		_:
+			_fire_flame_draft()
+
+
+## Flame Draft: costs ability energy, pierces, and ignites what it hits.
+func _fire_flame_draft() -> void:
 	var flame: Node2D = flame_pool.acquire()
 	flame.launch(muzzle.global_position, facing,
 			int(round(float(flame_damage) * GameManager.factor("damage_mult"))), true)
 	Sfx.play("flame_draft")
 	Juice.shake(5.0, 0.2)
 	_squash = Vector2(1.2, 0.85)
+
+
+## Impact Dash: an armoured charge that damages everything it passes through.
+func _start_impact_dash() -> void:
+	impact_dashing = true
+	dashing = false
+	pounding = false
+	impact_timer = impact_dash_duration
+	_impact_hit.clear()
+	var direction := Input.get_axis("move_left", "move_right")
+	if direction != 0.0:
+		facing = 1 if direction > 0.0 else -1
+	velocity = Vector2(facing * impact_dash_speed, 0.0)
+	# Armoured for the whole charge — that is what makes it worth the energy.
+	invulnerability_timer = maxf(invulnerability_timer, impact_dash_duration)
+	# Same sample as the normal dash, pitched down: the ear reads it as the
+	# heavy version of a move it already knows.
+	Sfx.play_pitched("dash", -5.0)
+	Juice.dust(_feet_position(), 14)
+	Juice.shake(6.0, 0.25)
+	_squash = Vector2(1.45, 0.68)
+
+
+func _process_impact_dash(delta: float) -> void:
+	impact_timer -= delta
+	velocity = Vector2(facing * impact_dash_speed, 0.0)
+	_sweep_impact()
+	if impact_timer <= 0.0 or is_on_wall():
+		impact_dashing = false
+		velocity.x = facing * move_speed
+		air_dash_available = true
+		_squash = Vector2(0.82, 1.2)
+
+
+func _sweep_impact() -> void:
+	# Holding both abilities upgrades the charge rather than adding a button.
+	var meltdown := not GameManager.active_combo().is_empty()
+	var damage := maxi(int(round(float(impact_damage) * GameManager.factor("damage_mult"))), 1)
+	for body in impact_area.get_overlapping_bodies():
+		if not body.has_method("take_damage"):
+			continue
+		var id := body.get_instance_id()
+		if id in _impact_hit:
+			continue  # one pass is one hit, however long the overlap lasts
+		_impact_hit.append(id)
+		body.take_damage(damage)
+		if meltdown and body.has_method("apply_burn"):
+			body.apply_burn(impact_burn_damage, impact_burn_ticks)
+		Juice.hit_spark(body.global_position)
+		Juice.hit_stop(0.04)
+	for area in impact_area.get_overlapping_areas():
+		if area.has_method("shatter"):
+			area.shatter()
 
 
 ## Monster Munch: consume a nearby weakened enemy (§7).
@@ -435,6 +519,7 @@ func launch(power: float) -> void:
 	air_jumps_left = _max_air_jumps()
 	air_dash_available = true
 	pounding = false
+	impact_dashing = false
 	_squash = Vector2(0.7, 1.35)
 	Sfx.play("bounce")
 	Juice.jump_puff(_feet_position())
@@ -490,7 +575,7 @@ func _update_visuals(delta: float) -> void:
 ## Entry point for enemies and hazards. I-frames live here; run-level
 ## Coverage accounting lives in GameManager.
 func hurt(amount: int, source: String) -> void:
-	if invulnerability_timer > 0.0 or dashing:
+	if invulnerability_timer > 0.0 or dashing or impact_dashing:
 		return
 	invulnerability_timer = maxf(invulnerability_time + GameManager.stat("invuln_time"), 0.2)
 	pounding = false

@@ -53,6 +53,8 @@ func _ready() -> void:
 	Events.currency_changed.connect(_on_currency_changed)
 	Events.shield_changed.connect(_on_shield_changed)
 	Events.ability_energy_changed.connect(_on_ability_energy_changed)
+	Events.ability_changed.connect(_on_ability_changed)
+	Events.ability_granted.connect(_on_ability_granted)
 	Events.combo_changed.connect(_on_combo_changed)
 	_rng.randomize()
 	_build_danger_arrows()
@@ -104,11 +106,22 @@ func _on_quit_pressed() -> void:
 
 ## Pause doubles as the inventory screen (§23): what you are actually holding.
 func _refresh_inventory() -> void:
+	var lines: Array[String] = []
+	for id in GameManager.abilities:
+		var ability := Abilities.entry(String(id))
+		var equipped := " (equipped)" if String(id) == GameManager.current_ability() else ""
+		lines.append("◆ %s%s" % [String(ability.get("name", "")), equipped])
+	var combo := GameManager.active_combo()
+	if not combo.is_empty():
+		lines.append("◆ %s — %s" % [
+			String(combo.get("name", "")), String(combo.get("blurb", ""))])
 	var entries := GameManager.card_list()
 	if entries.is_empty():
-		inventory_label.text = "No endorsements held."
+		lines.append("")
+		lines.append("No endorsements held.")
+		inventory_label.text = "\n".join(lines)
 		return
-	var lines: Array[String] = []
+	lines.append("")
 	for entry in entries:
 		var card: PolicyCard = entry["card"]
 		var stacks := int(entry["stacks"])
@@ -185,8 +198,41 @@ func _on_ability_energy_changed(current: float, maximum: float) -> void:
 	ability_bar.value = current
 	# Bright label = ready to fire; dim = still charging (colorblind-safe
 	# because the bar length carries the same information).
-	var ready := current >= GameManager.ABILITY_COST
+	var ready := current >= GameManager.ability_cost()
 	ability_label.modulate = Color.WHITE if ready else Color(1, 1, 1, 0.4)
+
+
+## The label names the equipped ability rather than assuming Flame Draft, and
+## says so when a combination is changing how it behaves (§14).
+func _on_ability_changed(ability_id: String) -> void:
+	var entry := Abilities.entry(ability_id)
+	var text := String(entry.get("name", "ABILITY"))
+	if GameManager.abilities.size() > 1:
+		text += "  (%d/%d)" % [GameManager.ability_index + 1, GameManager.abilities.size()]
+	var combo := GameManager.active_combo()
+	if not combo.is_empty():
+		text += "  ·  %s" % String(combo.get("name", ""))
+	ability_label.text = text
+
+
+func _on_ability_granted(ability_id: String) -> void:
+	var entry := Abilities.entry(ability_id)
+	var combo := GameManager.active_combo()
+	var lines := ["ABILITY ABSORBED — %s" % String(entry.get("name", "")),
+			String(entry.get("blurb", ""))]
+	if not combo.is_empty():
+		lines.append("%s unlocked: %s" % [
+			String(combo.get("name", "")), String(combo.get("blurb", ""))])
+	if GameManager.abilities.size() > 1:
+		lines.append("Kept for good — every future run starts with both. Press CYCLE to swap.")
+	# Not a one-time hint: absorbing a power is rare enough to always announce.
+	hint_label.text = "\n".join(lines)
+	hint_label.modulate.a = 0.0
+	var tween := create_tween()
+	tween.tween_property(hint_label, "modulate:a", 1.0, 0.3)
+	tween.tween_interval(4.2)
+	tween.tween_property(hint_label, "modulate:a", 0.0, 0.6)
+	Sfx.play("pickup_card")
 
 
 ## Room-entry banner: names the Risk Zone, then gets out of the way fast.

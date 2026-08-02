@@ -16,6 +16,12 @@ func _ready() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# _input still fires on hidden Controls, so a button the game has put away
+	# would keep answering taps in the empty space it used to occupy.
+	if not is_visible_in_tree():
+		if _touch_index != -1:
+			_release()
+		return
 	if event is InputEventScreenTouch:
 		if event.pressed and _touch_index == -1 and _inside(event.position):
 			_touch_index = event.index

@@ -28,12 +28,26 @@ func _ready() -> void:
 func _show_record() -> void:
 	var lifetime: Dictionary = SaveManager.get_section("stats")
 	var runs := int(lifetime.get("runs", 0))
+	var lines: Array[String] = []
 	if runs == 0:
-		record_label.text = "No claims on file."
-		return
-	record_label.text = "Claims filed: %d     Survived: %d     Worst loss: $%s" % [
-		runs, int(lifetime.get("wins", 0)),
-		ClaimReport.money(int(lifetime.get("best_property_damage", 0)))]
+		lines.append("No claims on file.")
+	else:
+		lines.append("Claims filed: %d     Survived: %d     Worst loss: $%s" % [
+			runs, int(lifetime.get("wins", 0)),
+			ClaimReport.money(int(lifetime.get("best_property_damage", 0)))])
+	# WIT Headquarters (§24): powers taken off bosses are the one thing that
+	# survives a run, so the title screen is where you see them accumulate.
+	var unlocked := GameManager.unlocked_abilities()
+	if unlocked.size() > 1:
+		var names: Array[String] = []
+		for id in unlocked:
+			names.append(String(Abilities.entry(String(id)).get("name", "")))
+		lines.append("Powers absorbed: " + "  ·  ".join(names))
+		var combo := Abilities.combo_for(unlocked)
+		if not combo.is_empty():
+			lines.append("%s active — %s" % [
+				String(combo.get("name", "")), String(combo.get("blurb", ""))])
+	record_label.text = "\n".join(lines)
 
 
 func _build_menu() -> void:

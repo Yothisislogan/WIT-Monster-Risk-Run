@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://witplayer00001"]
+[gd_scene load_steps=12 format=3 uid="uid://witplayer00001"]
 
 [ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/player/monster_visual.gd" id="2_visual"]
@@ -19,6 +19,9 @@ size = Vector2(30, 18)
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_pound"]
 radius = 110.0
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_impact"]
+size = Vector2(62, 48)
 
 [node name="Player" type="CharacterBody2D" groups=["player"]]
 collision_layer = 2
@@ -116,6 +119,13 @@ collision_mask = 68
 
 [node name="Collision" type="CollisionShape2D" parent="PoundArea"]
 shape = SubResource("CircleShape2D_pound")
+
+[node name="ImpactArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 68
+
+[node name="Collision" type="CollisionShape2D" parent="ImpactArea"]
+shape = SubResource("RectangleShape2D_impact")
 
 [node name="Camera" type="Camera2D" parent="."]
 position_smoothing_enabled = true

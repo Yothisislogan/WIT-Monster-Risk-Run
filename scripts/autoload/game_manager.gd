@@ -18,7 +18,6 @@ const BOSS_ROOM := "res://scenes/rooms/boss_inferno_adjuster.tscn"
 
 const BASE_COVERAGE := 100
 const MAX_ABILITY_ENERGY := 100.0
-const ABILITY_COST := 40.0
 ## Coverage fraction at or below which the HUD and audio warn you.
 const LOW_COVERAGE_RATIO := 0.3
 ## Chaining takedowns builds an "Adjuster's Streak": more Premiums per kill,
@@ -53,6 +52,10 @@ var coverage: int = BASE_COVERAGE
 var currency: int = 0
 var umbrella_active: bool = false  # blocks one hit
 var ability_energy: float = 0.0    # fuels the equipped boss ability
+## Boss abilities absorbed so far (§12). You always start with Flame Draft;
+## beating a boss adds its power to the list and you cycle between them.
+var abilities: Array = [Abilities.FLAME_DRAFT]
+var ability_index: int = 0
 var room_sequence: Array = []
 var room_index: int = 0
 var run_active: bool = false
@@ -228,6 +231,8 @@ func start_new_run(chosen_deductible: String = "standard") -> void:
 	currency = 0
 	umbrella_active = false
 	ability_energy = 0.0
+	abilities = unlocked_abilities()
+	ability_index = 0
 	revives_left = 0
 	risk = float(DEDUCTIBLES[deductible]["risk"])
 	combo = 0
@@ -258,6 +263,12 @@ func resume_run() -> bool:
 	currency = int(run.get("currency", 0))
 	umbrella_active = bool(run.get("umbrella_active", false))
 	ability_energy = clampf(float(run.get("ability_energy", 0.0)), 0.0, MAX_ABILITY_ENERGY)
+	# Drop abilities that no longer exist, so an older save still loads (§17).
+	abilities = run.get("abilities", unlocked_abilities()).filter(
+			func(id: Variant) -> bool: return Abilities.ABILITIES.has(String(id)))
+	if abilities.is_empty():
+		abilities = unlocked_abilities()
+	ability_index = clampi(int(run.get("ability_index", 0)), 0, abilities.size() - 1)
 	risk = clampf(float(run.get("risk", 0.0)), 0.0, 1.0)
 	revives_left = int(run.get("revives_left", 0))
 	best_combo = int(run.get("best_combo", 0))
@@ -282,6 +293,7 @@ func _emit_state() -> void:
 	Events.currency_changed.emit(currency)
 	Events.shield_changed.emit(umbrella_active)
 	Events.ability_energy_changed.emit(ability_energy, MAX_ABILITY_ENERGY)
+	Events.ability_changed.emit(current_ability())
 	Events.risk_changed.emit(risk)
 
 
@@ -328,6 +340,8 @@ func save_checkpoint() -> void:
 		"currency": currency,
 		"umbrella_active": umbrella_active,
 		"ability_energy": ability_energy,
+		"abilities": abilities,
+		"ability_index": ability_index,
 		"risk": risk,
 		"held_cards": held_cards,
 		"revives_left": revives_left,
@@ -446,7 +460,7 @@ func add_ability_energy(amount: float) -> void:
 
 
 func ability_cost() -> float:
-	return ABILITY_COST * factor("ability_cost_mult")
+	return Abilities.cost(current_ability()) * factor("ability_cost_mult")
 
 
 func try_spend_ability_energy() -> bool:
@@ -456,6 +470,55 @@ func try_spend_ability_energy() -> bool:
 	ability_energy -= cost
 	Events.ability_energy_changed.emit(ability_energy, MAX_ABILITY_ENERGY)
 	return true
+
+
+# --- Boss abilities (§12, §14) ---------------------------------------------
+
+func current_ability() -> String:
+	if abilities.is_empty():
+		return Abilities.FLAME_DRAFT
+	return String(abilities[ability_index % abilities.size()])
+
+
+## Absorbed abilities are permanent (§24, WIT Headquarters). The boss is the
+## last thing in a run, so an ability you only keep until the claim report
+## would be no reward at all — every later run starts with it instead.
+func unlocked_abilities() -> Array:
+	var profile: Dictionary = SaveManager.get_section("profile")
+	var out: Array = [Abilities.FLAME_DRAFT]
+	for id in profile.get("abilities", []):
+		var ability_id := String(id)
+		if Abilities.ABILITIES.has(ability_id) and not (ability_id in out):
+			out.append(ability_id)
+	return out
+
+
+## Beating a boss absorbs its power. Absorbing a second one also unlocks the
+## combination the two form together (§14).
+func grant_ability(id: String) -> void:
+	if not Abilities.ABILITIES.has(id) or id in abilities:
+		return
+	abilities.append(id)
+	ability_index = abilities.size() - 1
+	var profile: Dictionary = SaveManager.get_section("profile")
+	profile["abilities"] = abilities.duplicate()
+	SaveManager.set_section("profile", profile)
+	Events.ability_granted.emit(id)
+	Events.ability_changed.emit(id)
+
+
+func cycle_ability() -> void:
+	if abilities.size() < 2:
+		return
+	ability_index = (ability_index + 1) % abilities.size()
+	Events.ability_changed.emit(current_ability())
+	Events.ability_energy_changed.emit(ability_energy, MAX_ABILITY_ENERGY)
+
+
+## Non-empty once you hold every ability of a known combination, which changes
+## how the equipped ability behaves rather than adding a fourth button.
+func active_combo() -> Dictionary:
+	return Abilities.combo_for(abilities)
 
 
 # --- Combo -----------------------------------------------------------------

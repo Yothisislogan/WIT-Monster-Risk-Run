@@ -38,6 +38,7 @@ jobs:
       - name: Static checks
         run: |
           python3 tools/check_references.py
+          python3 tools/check_inputs.py
           python3 tools/check_reachability.py
           python3 tools/check_pickups.py
           python3 tools/check_economy.py

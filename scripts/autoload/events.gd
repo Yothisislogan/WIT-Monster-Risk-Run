@@ -9,6 +9,8 @@ signal player_died(cause: String)
 signal shield_changed(active: bool)
 signal charge_changed(ratio: float)
 signal ability_energy_changed(current: float, maximum: float)
+signal ability_changed(ability_id: String)
+signal ability_granted(ability_id: String)
 signal combo_changed(count: int, ratio: float)
 signal risk_changed(value: float)
 
