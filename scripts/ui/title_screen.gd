@@ -2,9 +2,31 @@ extends Control
 ## Title screen and run setup. A returning player with a saved run sees
 ## CONTINUE first; a new player sees the deductible choice, which is where
 ## difficulty is actually selected (GAME_DESIGN.md §8, §23).
+##
+## The screen is composed inside a "Stage" child sized to exactly 1280x720 and
+## anchored to the centre. The project stretches with aspect "expand", so on a
+## wider phone the viewport really is wider than the design box; keeping the
+## composition in one centred Stage means every position on this screen is a
+## plain design coordinate, and the extra width shows as more sky rather than
+## as a menu drifting into a corner.
+##
+## Splash, Monster and Logo are decoration and own no input. Lightning from the
+## backdrop is forwarded to the other two here, so neither has to go looking
+## through the tree for the other.
 
 const GAME_SCENE := "res://scenes/main.tscn"
 
+## Menu geometry. Four entries is the most the menu ever shows (CONTINUE RUN
+## only appears with a save), and tools/check_title.py checks that four of
+## these plus the separator still fit the Menu box in scenes/title.tscn.
+const MENU_BUTTON_SIZE := Vector2(420.0, 68.0)
+const MENU_MAX_ENTRIES := 4
+const MENU_FONT_SIZE := 30
+
+@onready var front: Control = %Front
+@onready var splash: Node2D = %Splash
+@onready var monster: Node2D = %Monster
+@onready var logo: Control = %Logo
 @onready var menu: VBoxContainer = %Menu
 @onready var deductible_panel: PanelContainer = %DeductiblePanel
 @onready var deductible_rows: VBoxContainer = %DeductibleRows
@@ -18,19 +40,27 @@ func _ready() -> void:
 	settings_panel.visible = false
 	deductible_panel.visible = false
 	headquarters.visible = false
+	splash.lightning_struck.connect(_on_lightning)
 	headquarters.closed.connect(func() -> void:
 		headquarters.visible = false
-		menu.visible = true
+		front.visible = true
 		_show_record()
 		_build_menu())
 	settings_panel.closed.connect(func() -> void:
 		settings_panel.visible = false
-		menu.visible = true
+		front.visible = true
 		_build_menu())
 	_build_menu()
 	_build_deductibles()
 	_show_record()
 	MusicManager.play("blaze_borough")
+
+
+## One signal in, two reactions out: the Monster startles and the wordmark
+## catches the light. Neither knows the other exists.
+func _on_lightning(strength: float) -> void:
+	monster.on_lightning(strength)
+	logo.on_lightning(strength)
 
 
 func _show_record() -> void:
@@ -81,8 +111,8 @@ func _build_menu() -> void:
 func _button(text: String, handler: Callable) -> Button:
 	var button := Button.new()
 	button.text = text
-	button.custom_minimum_size = Vector2(420, 78)
-	button.add_theme_font_size_override("font_size", 30)
+	button.custom_minimum_size = MENU_BUTTON_SIZE
+	button.add_theme_font_size_override("font_size", MENU_FONT_SIZE)
 	button.pressed.connect(handler)
 	return button
 
@@ -114,9 +144,13 @@ func _on_continue() -> void:
 	_start()
 
 
+## Every panel hides Front and leaves Splash running, so the storm keeps going
+## behind the modal instead of the screen cutting to a flat colour. Front is
+## the wordmark, the Monster, the menu and the record line — everything the
+## panel would otherwise be competing with for attention.
 func _on_new_policy() -> void:
 	Sfx.play("ui_move")
-	menu.visible = false
+	front.visible = false
 	deductible_panel.visible = true
 	# STANDARD is the middle row and the sane default to land on.
 	(deductible_rows.get_child(1) as Button).call_deferred("grab_focus")
@@ -124,14 +158,14 @@ func _on_new_policy() -> void:
 
 func _on_headquarters() -> void:
 	Sfx.play("ui_move")
-	menu.visible = false
+	front.visible = false
 	headquarters.visible = true
 	headquarters.refresh()
 
 
 func _on_options() -> void:
 	Sfx.play("ui_move")
-	menu.visible = false
+	front.visible = false
 	settings_panel.visible = true
 	settings_panel.focus_first()
 
