@@ -106,6 +106,8 @@ var _fall_speed: float = 0.0
 
 
 var auto_fire: bool = false
+var _surface_friction: float = 1.0
+var _surface_accel: float = 1.0
 
 
 func _ready() -> void:
@@ -127,6 +129,8 @@ func apply_camera_bounds(bounds: Rect2) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_surface_friction = 1.0
+	_surface_accel = 1.0
 	_update_timers(delta)
 	_read_action_buffers()
 
@@ -195,14 +199,23 @@ func _bonus_air_jumps() -> int:
 	return int(GameManager.stat("air_jumps"))
 
 
+## Slippery surfaces call this every frame they are underfoot. It only ever
+## reduces grip, and it resets each frame so stepping off restores control.
+func apply_surface(friction_mult: float, accel_mult: float) -> void:
+	_surface_friction = minf(_surface_friction, friction_mult)
+	_surface_accel = minf(_surface_accel, accel_mult)
+
+
 func _process_walk(delta: float) -> void:
 	var direction := Input.get_axis("move_left", "move_right")
 	if direction != 0.0:
 		facing = 1 if direction > 0.0 else -1
 		var accel := ground_accel if is_on_floor() else air_accel
+		if is_on_floor():
+			accel *= _surface_accel
 		velocity.x = move_toward(velocity.x, direction * _speed(), accel * delta)
 	elif is_on_floor():
-		velocity.x = move_toward(velocity.x, 0.0, ground_friction * delta)
+		velocity.x = move_toward(velocity.x, 0.0, ground_friction * _surface_friction * delta)
 
 
 func _process_wall(delta: float) -> void:

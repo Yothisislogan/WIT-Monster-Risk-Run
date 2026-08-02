@@ -10,6 +10,8 @@ const ROOM_POOL: Array[String] = [
 	"res://scenes/rooms/test_room_a.tscn",
 	"res://scenes/rooms/test_room_b.tscn",
 	"res://scenes/rooms/test_room_c.tscn",
+	"res://scenes/rooms/test_room_d.tscn",
+	"res://scenes/rooms/test_room_e.tscn",
 ]
 ## Always the last room of a run, when it exists.
 const BOSS_ROOM := "res://scenes/rooms/boss_inferno_adjuster.tscn"
@@ -202,9 +204,15 @@ func damage_taken_factor() -> float:
 
 # --- Run lifecycle ---------------------------------------------------------
 
+## Rooms drawn per run. Fewer than the pool, so two runs rarely share a
+## sequence — variety without making a run longer (§5 run length).
+const ROOMS_PER_RUN := 3
+
+
 func _build_sequence() -> Array:
-	var sequence: Array = ROOM_POOL.duplicate()
-	sequence.shuffle()
+	var pool: Array = ROOM_POOL.duplicate()
+	pool.shuffle()
+	var sequence: Array = pool.slice(0, mini(ROOMS_PER_RUN, pool.size()))
 	# The boss closes every run once its room exists.
 	if ResourceLoader.exists(BOSS_ROOM):
 		sequence.append(BOSS_ROOM)
