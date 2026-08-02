@@ -103,6 +103,7 @@ func _fall(delta: float) -> void:
 
 func _collect() -> void:
 	GameManager.add_currency(value)
+	Sfx.play_chain("coin", 0.8)
 	Juice.coin_sparkle(global_position)
 	queue_free()
 

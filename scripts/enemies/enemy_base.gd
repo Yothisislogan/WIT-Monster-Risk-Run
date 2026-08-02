@@ -83,6 +83,7 @@ func consume() -> void:
 
 ## Override for hit feedback (flash, sound, knockback).
 func _on_damaged() -> void:
+	Sfx.play("enemy_hit", 0.12)
 	Juice.hit_spark(global_position)
 
 
@@ -98,6 +99,7 @@ func _on_burn_changed(_burning: bool) -> void:
 
 func die() -> void:
 	GameManager.record_enemy_defeated()
+	Sfx.play("enemy_death", 0.1)
 	Juice.enemy_death(global_position, death_color)
 	Juice.shake(4.0, 0.2)
 	_drop_premiums()

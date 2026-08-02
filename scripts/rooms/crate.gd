@@ -29,6 +29,7 @@ func take_damage(amount: int) -> void:
 
 
 func shatter() -> void:
+	Sfx.play("crate_break", 0.1)
 	Juice.debris(global_position, debris_color)
 	Juice.shake(3.0, 0.15)
 	_spawn_premiums()

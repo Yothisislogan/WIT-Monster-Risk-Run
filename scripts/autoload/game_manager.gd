@@ -15,6 +15,8 @@ const ROOM_POOL: Array[String] = [
 const BASE_COVERAGE := 100
 const MAX_ABILITY_ENERGY := 100.0
 const ABILITY_COST := 40.0
+## Coverage fraction at or below which the HUD and audio warn you.
+const LOW_COVERAGE_RATIO := 0.3
 ## Chaining takedowns builds an "Adjuster's Streak": more Premiums per kill,
 ## and it drops the moment you take a hit. Reckless play pays (§11).
 const COMBO_WINDOW := 3.0
@@ -142,6 +144,7 @@ func current_room_path() -> String:
 ## start of the next room; the room itself is never re-rolled on resume (§17).
 func complete_room() -> void:
 	stats["rooms_completed"] = int(stats["rooms_completed"]) + 1
+	Sfx.play("room_clear")
 	Events.room_completed.emit(current_room_path())
 	if room_index + 1 >= room_sequence.size():
 		end_run(true)
@@ -189,6 +192,10 @@ func damage(amount: int, source: String) -> void:
 	stats["damage_taken"] = int(stats["damage_taken"]) + amount
 	Events.player_damaged.emit(amount, source)
 	Events.coverage_changed.emit(coverage, max_coverage)
+	# Audible warning the first time a hit drops you into the danger band.
+	if coverage > 0 and float(coverage) / float(max_coverage) <= LOW_COVERAGE_RATIO \
+			and float(coverage + amount) / float(max_coverage) > LOW_COVERAGE_RATIO:
+		Sfx.play("low_coverage", 0.0)
 	if coverage == 0:
 		Events.player_died.emit(source)
 		end_run(false)

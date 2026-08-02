@@ -34,9 +34,12 @@ func _ready() -> void:
 	Events.run_started.connect(_on_run_started)
 	Events.run_ended.connect(_on_run_ended)
 	restart_button.pressed.connect(func() -> void:
+		Sfx.play("ui_confirm")
 		claim_panel.visible = false
 		restart_requested.emit())
-	resume_button.pressed.connect(func() -> void: get_tree().paused = false)
+	resume_button.pressed.connect(func() -> void:
+		Sfx.play("ui_confirm")
+		get_tree().paused = false)
 	music_button.pressed.connect(_on_music_pressed)
 	_refresh_music_button()
 
