@@ -30,16 +30,19 @@ const DEDUCTIBLES := {
 		"label": "LOW DEDUCTIBLE",
 		"blurb": "More Coverage, gentler perils, smaller payouts.",
 		"coverage": 130, "damage_taken": 0.8, "premium": 0.8, "risk": 0.0,
+		"healing": 1.25,
 	},
 	"standard": {
 		"label": "STANDARD DEDUCTIBLE",
 		"blurb": "The policy exactly as written.",
 		"coverage": 100, "damage_taken": 1.0, "premium": 1.0, "risk": 0.1,
+		"healing": 1.0,
 	},
 	"high": {
 		"label": "HIGH DEDUCTIBLE",
 		"blurb": "Thin Coverage, angrier perils, far better cards.",
 		"coverage": 70, "damage_taken": 1.25, "premium": 1.6, "risk": 0.35,
+		"healing": 0.7,
 	},
 }
 
@@ -378,11 +381,18 @@ func _revive() -> void:
 	Events.coverage_changed.emit(coverage, max_coverage)
 
 
+## §8 gives each deductible a different healing rate: Low heals more, High
+## heals less. Every heal in the game routes through here.
+func healing_factor() -> float:
+	return float(DEDUCTIBLES[deductible].get("healing", 1.0))
+
+
 func heal(amount: int) -> void:
 	if amount <= 0:
 		return
 	_healed_this_room = true
-	coverage = mini(coverage + amount, max_coverage)
+	var scaled := maxi(int(round(float(amount) * healing_factor())), 1)
+	coverage = mini(coverage + scaled, max_coverage)
 	Events.coverage_changed.emit(coverage, max_coverage)
 
 
