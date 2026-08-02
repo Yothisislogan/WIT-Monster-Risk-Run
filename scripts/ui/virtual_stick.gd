@@ -20,6 +20,13 @@ func _ready() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# _input still fires on hidden Controls. The layer hides the stick while
+	# paused, and a stick that keeps reading drags behind a pause menu would
+	# hand the player a direction they never asked for on resume.
+	if not is_visible_in_tree():
+		if _touch_index != -1:
+			_release()
+		return
 	if event is InputEventScreenTouch:
 		if event.pressed and _touch_index == -1 and get_global_rect().has_point(event.position):
 			_touch_index = event.index

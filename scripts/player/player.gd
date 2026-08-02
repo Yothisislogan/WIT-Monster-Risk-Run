@@ -34,6 +34,11 @@ extends CharacterBody2D
 @export var coyote_time: float = 0.12
 @export var jump_buffer_time: float = 0.15
 
+## §6's attack buffer. A press that arrives while the weapon is still on
+## cooldown is remembered rather than swallowed, so tapping through a landing
+## fires the moment the weapon is free instead of eating the input.
+@export var attack_buffer_time: float = 0.12
+
 # --- Dash (buffer ~100ms per §6) ---
 @export var dash_speed: float = 780.0
 @export var dash_duration: float = 0.16
@@ -92,6 +97,7 @@ var facing: int = 1
 var coyote_timer: float = 0.0
 var jump_buffer_timer: float = 0.0
 var dash_buffer_timer: float = 0.0
+var attack_buffer_timer: float = 0.0
 var wall_coyote_timer: float = 0.0
 var last_wall_normal: float = 0.0
 ## Which wall last paid for an air-jump refill this airtime. Cleared on
@@ -182,6 +188,7 @@ func _update_timers(delta: float) -> void:
 	coyote_timer = maxf(coyote_timer - delta, 0.0)
 	jump_buffer_timer = maxf(jump_buffer_timer - delta, 0.0)
 	dash_buffer_timer = maxf(dash_buffer_timer - delta, 0.0)
+	attack_buffer_timer = maxf(attack_buffer_timer - delta, 0.0)
 	wall_coyote_timer = maxf(wall_coyote_timer - delta, 0.0)
 	dash_cooldown_timer = maxf(dash_cooldown_timer - delta, 0.0)
 	fire_timer = maxf(fire_timer - delta, 0.0)
@@ -193,6 +200,11 @@ func _read_action_buffers() -> void:
 		jump_buffer_timer = jump_buffer_time
 	if Input.is_action_just_pressed("dash"):
 		dash_buffer_timer = dash_buffer_time
+	# Only a press the weapon cannot act on right now is worth remembering.
+	# _process_weapon ignores a press while fire_timer is running, which is
+	# exactly the "shot in the air, land, tap again" case §6 is about.
+	if Input.is_action_just_pressed("attack") and fire_timer > 0.0:
+		attack_buffer_timer = attack_buffer_time
 
 
 func _apply_gravity(delta: float) -> void:
@@ -398,6 +410,12 @@ func _process_weapon(delta: float) -> void:
 			and not Input.is_action_pressed("attack"):
 		_fire(projectile_damage, false)
 		Sfx.play("shoot", 0.08, 0.8)
+	# Spend a buffered press the moment the weapon is free again.
+	if attack_buffer_timer > 0.0 and fire_timer <= 0.0 and not charging:
+		attack_buffer_timer = 0.0
+		_fire(projectile_damage, false)
+		Sfx.play("shoot")
+		return
 	# Charging never blocks running or jumping (§7).
 	if Input.is_action_just_pressed("attack") and fire_timer <= 0.0:
 		charging = true

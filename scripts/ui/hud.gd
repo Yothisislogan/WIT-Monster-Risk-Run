@@ -42,6 +42,7 @@ const PATCH_HEAL := 45
 var _banner_tween: Tween
 var _rng := RandomNumberGenerator.new()
 var _arrow_pool: Array[Polygon2D] = []
+var _pause_held: bool = false
 
 
 func _ready() -> void:
@@ -89,6 +90,7 @@ func _refresh_music_button() -> void:
 
 
 func _process(_delta: float) -> void:
+	_poll_pause()
 	# The card picker also pauses, so do not stack the two overlays.
 	_update_danger_arrows()
 	var show_pause := get_tree().paused and not card_panel.visible
@@ -168,11 +170,17 @@ func _hint(id: String, text: String) -> void:
 	tween.tween_property(hint_label, "modulate:a", 0.0, 0.6)
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if card_panel.visible:
+## Pause is polled with our own edge detector rather than handled as an event,
+## because virtual buttons drive input through Input.action_press(), which
+## sets the action state without ever synthesising an InputEvent — so an
+## event-based handler is invisible to the on-screen pause button.
+func _poll_pause() -> void:
+	var held := Input.is_action_pressed("pause")
+	var just_pressed := held and not _pause_held
+	_pause_held = held
+	if not just_pressed or card_panel.visible or not GameManager.run_active:
 		return
-	if event.is_action_pressed("pause") and GameManager.run_active:
-		get_tree().paused = not get_tree().paused
+	get_tree().paused = not get_tree().paused
 
 
 func _on_coverage_changed(current: int, maximum: int) -> void:

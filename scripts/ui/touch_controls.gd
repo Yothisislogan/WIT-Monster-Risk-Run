@@ -5,15 +5,20 @@ extends CanvasLayer
 
 @onready var root: Control = $Root
 @onready var cycle_button: Control = $Root/CycleButton
+@onready var pause_button: Control = $Root/PauseButton
 
 ## Anchors and offsets exactly as authored. Left-handed play mirrors these
 ## rather than the current values, so re-applying settings cannot flip an
 ## already-mirrored layout back.
 var _base_layout: Dictionary = {}
+var _paused: bool = false
 
 
 func _ready() -> void:
 	visible = DisplayServer.is_touchscreen_available()
+	# Touch input must survive the pause, or the pause button is the one
+	# control you cannot use once you have used it.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_capture_base_layout()
 	Settings.changed.connect(_on_setting_changed)
 	_apply_settings()
@@ -25,7 +30,23 @@ func _ready() -> void:
 
 
 func _refresh_cycle_button() -> void:
-	cycle_button.visible = GameManager.abilities.size() > 1
+	cycle_button.visible = GameManager.abilities.size() > 1 and not _paused
+
+
+## Gameplay controls go away while the game is paused. That is not only tidy:
+## Input.action_press latches until something releases it, and the auto-pause
+## on focus-out (GameManager._notification) fires while a thumb is still down.
+## Hiding them trips the visibility guard in virtual_button/virtual_stick,
+## which releases the action instead of leaving it held through the resume.
+func _process(_delta: float) -> void:
+	var paused := get_tree().paused
+	if paused == _paused:
+		return
+	_paused = paused
+	for child in root.get_children():
+		if child is Control and child != pause_button:
+			(child as Control).visible = not paused
+	_refresh_cycle_button()
 
 
 func _capture_base_layout() -> void:
