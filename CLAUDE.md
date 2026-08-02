@@ -31,8 +31,8 @@ source as text. A green local run does not mean the game loads.
 Run them all before committing:
 
 ```
-for t in references scenes signals inputs gestures movement aim map sites \
-         meta reachability pickups economy; do python3 tools/check_$t.py || break; done
+for t in references godot_api scenes signals inputs gestures movement aim \
+         map sites meta reachability pickups economy; do python3 tools/check_$t.py || break; done
 ```
 
 ## Architecture rules the codebase actually follows

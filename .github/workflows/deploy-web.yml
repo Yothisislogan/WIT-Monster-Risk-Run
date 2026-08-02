@@ -38,6 +38,7 @@ jobs:
       - name: Static checks
         run: |
           python3 tools/check_references.py
+          python3 tools/check_godot_api.py
           python3 tools/check_scenes.py
           python3 tools/check_signals.py
           python3 tools/check_inputs.py

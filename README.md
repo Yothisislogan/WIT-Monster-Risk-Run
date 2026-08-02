@@ -169,6 +169,7 @@ reintroducing the bug it is meant to catch:
 
 ```
 python3 tools/check_references.py    # autoload/class members actually exist
+python3 tools/check_godot_api.py     # native members shadowed, engine virtuals redefined
 python3 tools/check_scenes.py        # .tscn structure, $Node and %Unique paths, connections
 python3 tools/check_signals.py       # every Events emit and handler matches its declaration
 python3 tools/check_inputs.py        # every input action referenced is declared
