@@ -12,11 +12,21 @@ const LOW_COVERAGE_RATIO := 0.3
 ## ends pinned at maximum Risk, which scales every peril and turns the back
 ## half of a run into a spiral. tools/check_economy.py measures the result.
 const RISK_PER_UNHEALED_SITE := 0.035
+## Taking an Exclusion is exactly what the Risk Meter exists to notice (§10).
+const RISK_PER_EXCLUSION := 0.18
 ## Coverage restored by consuming a weakened peril, before card modifiers.
 const MUNCH_HEAL := 14
 ## Closing out an act releases some of it. Thematically the claim is settled;
 ## mechanically it is the pressure valve that stops Risk from being a ratchet.
 const RISK_RELIEF_PER_BOSS := 0.09
+## Risk accrues with diminishing returns: a source is worth
+## `amount * (1 - RISK_DAMPING * risk)`. Without it the meter is a straight
+## ramp that pins itself well before a run ends. tools/check_economy.py has
+## always modelled the damped curve, so until now every balance number was
+## measured against a curve the game did not implement — the real game was
+## harsher than the model said. Relief is never damped: a valve that closes as
+## pressure rises is not a valve.
+const RISK_DAMPING := 0.4
 
 ## Chaining takedowns builds an "Adjuster's Streak": more Premiums per kill,
 ## and it drops the moment you take a hit. Reckless play pays (§11).
@@ -155,7 +165,7 @@ func add_card(id: String) -> void:
 	# Taking an Exclusion is exactly the sort of decision the Risk Meter exists
 	# to notice (§10, §11).
 	if card.is_exclusion:
-		add_risk(0.15)
+		add_risk(RISK_PER_EXCLUSION)
 	var new_max := _computed_max_coverage()
 	var delta := new_max - max_coverage
 	max_coverage = new_max
@@ -231,7 +241,10 @@ func combo_window() -> float:
 # --- Risk ------------------------------------------------------------------
 
 func add_risk(amount: float) -> void:
-	set_risk(risk + amount)
+	var scaled := amount
+	if scaled > 0.0:
+		scaled *= 1.0 - RISK_DAMPING * risk
+	set_risk(risk + scaled)
 
 
 func set_risk(value: float) -> void:

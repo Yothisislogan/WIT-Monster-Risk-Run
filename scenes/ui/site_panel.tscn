@@ -14,7 +14,7 @@ corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
-[node name="SitePanel" type="CanvasLayer"]
+[node name="SitePanel" type="CanvasLayer" groups=["modal_overlay"]]
 layer = 18
 script = ExtResource("1_script")
 

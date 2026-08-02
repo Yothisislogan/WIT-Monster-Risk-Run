@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/ui/claim_map_screen.gd" id="1_script"]
 
-[node name="ClaimMapScreen" type="CanvasLayer"]
+[node name="ClaimMapScreen" type="CanvasLayer" groups=["modal_overlay"]]
 layer = 20
 script = ExtResource("1_script")
 

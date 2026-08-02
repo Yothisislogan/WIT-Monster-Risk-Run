@@ -97,7 +97,7 @@ func _process(_delta: float) -> void:
 	_poll_pause()
 	# The card picker also pauses, so do not stack the two overlays.
 	_update_danger_arrows()
-	var show_pause := get_tree().paused and not card_panel.visible
+	var show_pause := get_tree().paused and not _modal_open()
 	if show_pause and not pause_panel.visible:
 		_refresh_inventory()
 		_focus_control(resume_button)
@@ -172,6 +172,20 @@ func _hint(id: String, text: String) -> void:
 	tween.tween_property(hint_label, "modulate:a", 1.0, 0.3)
 	tween.tween_interval(3.4)
 	tween.tween_property(hint_label, "modulate:a", 0.0, 0.6)
+
+
+## Any overlay that pauses the tree on purpose. The pause panel keys off
+## get_tree().paused, so without this it draws on top of the Claim Map and the
+## site panel — both of which pause for their own reasons. Membership is a
+## group rather than a list of references so a new overlay opts in by joining
+## it, instead of by remembering to edit this file.
+func _modal_open() -> bool:
+	if card_panel.visible:
+		return true
+	for node in get_tree().get_nodes_in_group("modal_overlay"):
+		if node is CanvasLayer and (node as CanvasLayer).visible:
+			return true
+	return false
 
 
 ## Pause is polled with our own edge detector rather than handled as an event,

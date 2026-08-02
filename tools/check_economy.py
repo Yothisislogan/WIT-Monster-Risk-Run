@@ -6,22 +6,38 @@ economy is designed against this model instead: it mirrors the exact constants
 the GDScript is meant to use, runs a Monte Carlo of full 11-room runs across
 every deductible and two skill profiles, and asserts the design targets.
 
-If you change a number in GameManager.DEDUCTIBLES, the Risk scalars, the shop
-price curve, or the healing table, change it here too and keep this green.
+The Risk scalars and the Munch heal are read directly out of game_manager.gd,
+so those cannot drift. The deductible table, the shop curve and the healing
+table are still mirrored by hand — if you change one of those, change it here
+too and keep this green.
 
     python3 tools/check_economy.py [-v]
 """
 import random
+import re
 import statistics
 import sys
+from pathlib import Path
+
+# Constants read straight out of the GDScript rather than retyped here. The
+# "keep them in sync by hand" note this file used to carry is exactly how the
+# Risk damping curve ended up existing only in the model, and the Exclusion
+# cost ended up 15 points in the game and 18 here.
+_GM = (Path(__file__).resolve().parent.parent
+       / "scripts" / "autoload" / "game_manager.gd").read_text(encoding="utf-8")
+
+
+def _gm_const(name, fallback):
+    found = re.search(rf"^const {name} := (-?[\d.]+)", _GM, re.MULTILINE)
+    return float(found.group(1)) if found else fallback
 
 # --- Risk Meter (§11) -------------------------------------------------------
 # Risk is stored 0..1; the design and the HUD talk in "Risk points" = risk*100.
 RISK_BANDS = [(0.75, "UNINSURABLE"), (0.50, "SEVERE"), (0.25, "ELEVATED"), (0.0, "STANDARD")]
 
 RISK_SOURCES = {           # Risk points added (the float field is points/100)
-    "exclusion_taken": 18,
-    "room_without_healing": 3.5,
+    "exclusion_taken": _gm_const("RISK_PER_EXCLUSION", 0.18) * 100,
+    "room_without_healing": _gm_const("RISK_PER_UNHEALED_SITE", 0.035) * 100,
     "decline_card": 4,
     "suspicious_container": 5,
     "claim_deny": 14,
@@ -31,13 +47,13 @@ RISK_SOURCES = {           # Risk points added (the float field is points/100)
     "miniboss_room": 8,
     # Closing an act settles the claim and releases pressure. Mirrors
     # GameManager.RISK_RELIEF_PER_BOSS.
-    "boss_defeated": -9,
+    "boss_defeated": -_gm_const("RISK_RELIEF_PER_BOSS", 0.09) * 100,
     "cancel_policy": 3,
 }
 # Diminishing accrual: each source is worth `points * (1 - RISK_DAMPING*risk)`.
 # The meter approaches UNINSURABLE asymptotically instead of flinging the
 # player there, so the top band is somewhere you climb to on purpose.
-RISK_DAMPING = 0.40
+RISK_DAMPING = _gm_const("RISK_DAMPING", 0.40)
 
 RISK_SINKS = {
     "safety_inspection_fixed": -8,
@@ -89,7 +105,7 @@ DEDUCTIBLES = {
 
 # --- Healing economy (§7, §8) ----------------------------------------------
 PICKUP_HEAL_RATIO = 0.17       # of max Coverage
-MUNCH_HEAL_RATIO = 0.14
+MUNCH_HEAL_RATIO = _gm_const("MUNCH_HEAL", 14) / 100.0
 PATCH_HEAL_RATIO = 0.35
 # Environmental damage (heat vents, pits) is a percentage of max Coverage, so
 # a smaller Coverage pool does not silently multiply every hazard in the game.
