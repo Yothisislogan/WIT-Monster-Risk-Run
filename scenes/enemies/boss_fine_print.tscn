@@ -1,0 +1,205 @@
+[gd_scene load_steps=9 format=3 uid="uid://witbossfp00001"]
+
+[ext_resource type="Script" path="res://scripts/enemies/boss_fine_print.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/enemies/fine_print_rider.gd" id="2_rider"]
+[ext_resource type="PackedScene" path="res://scenes/rooms/premium.tscn" id="3_premium"]
+
+[sub_resource type="RectangleShape2D" id="rect_body"]
+size = Vector2(140, 76)
+
+[sub_resource type="RectangleShape2D" id="rect_rider"]
+size = Vector2(76, 56)
+
+[sub_resource type="RectangleShape2D" id="rect_seal"]
+size = Vector2(132, 96)
+
+[sub_resource type="RectangleShape2D" id="rect_band"]
+size = Vector2(100, 96)
+
+[sub_resource type="RectangleShape2D" id="rect_sweep"]
+size = Vector2(60, 120)
+
+[node name="BossFinePrint" type="CharacterBody2D" groups=["boss"]]
+collision_layer = 4
+collision_mask = 1
+script = ExtResource("1_script")
+max_health = 620
+contact_damage = 15
+currency_reward = 70
+defeat_source = "buried in the fine print"
+weaken_ratio = 0.0
+premium_scene = ExtResource("3_premium")
+premium_drops = 9
+death_color = Color(0.92, 0.86, 0.62, 1)
+always_active = true
+
+[node name="Visual" type="Node2D" parent="."]
+
+[node name="ChainRig" type="Node2D" parent="Visual"]
+position = Vector2(0, -40)
+
+[node name="Chain" type="Polygon2D" parent="Visual/ChainRig"]
+polygon = PackedVector2Array(-6, -100, 6, -100, 6, 0, -6, 0)
+color = Color(0.28, 0.26, 0.22, 1)
+
+[node name="Plate" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(-70, -38, 70, -38, 70, 26, 52, 38, -52, 38, -70, 26)
+color = Color(0.78, 0.72, 0.56, 1)
+
+[node name="LineOne" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(-58, -26, 58, -26, 58, -21, -58, -21)
+color = Color(0.34, 0.3, 0.24, 1)
+
+[node name="LineTwo" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(-58, -14, 30, -14, 30, -9, -58, -9)
+color = Color(0.34, 0.3, 0.24, 1)
+
+[node name="LineThree" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(-58, 20, 44, 20, 44, 25, -58, 25)
+color = Color(0.34, 0.3, 0.24, 1)
+
+[node name="Wax" type="Polygon2D" parent="Visual"]
+position = Vector2(30, 6)
+polygon = PackedVector2Array(-16, -6, -6, -16, 6, -16, 16, -6, 16, 6, 6, 16, -6, 16, -16, 6)
+color = Color(0.86, 0.24, 0.28, 1)
+
+[node name="Collision" type="CollisionShape2D" parent="."]
+shape = SubResource("rect_body")
+
+[node name="Hitbox" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="Collision" type="CollisionShape2D" parent="Hitbox"]
+shape = SubResource("rect_body")
+
+[node name="Riders" type="Node2D" parent="."]
+
+[node name="RiderA" type="StaticBody2D" parent="Riders"]
+top_level = true
+position = Vector2(-400, -400)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_rider")
+
+[node name="Visual" type="Node2D" parent="Riders/RiderA"]
+
+[node name="Plate" type="Polygon2D" parent="Riders/RiderA/Visual"]
+polygon = PackedVector2Array(-38, -26, 38, -26, 38, 20, 30, 28, -30, 28, -38, 20)
+color = Color(0.86, 0.8, 0.62, 1)
+
+[node name="Rivets" type="Polygon2D" parent="Riders/RiderA/Visual"]
+polygon = PackedVector2Array(-30, 8, 30, 8, 30, 13, -30, 13)
+color = Color(0.4, 0.36, 0.28, 1)
+
+[node name="Wax" type="Polygon2D" parent="Riders/RiderA/Visual"]
+position = Vector2(0, -22)
+polygon = PackedVector2Array(0, -18, 16, 0, 0, 18, -16, 0)
+color = Color(0.95, 0.78, 0.3, 1)
+
+[node name="Collision" type="CollisionShape2D" parent="Riders/RiderA"]
+shape = SubResource("rect_rider")
+
+[node name="SealArea" type="Area2D" parent="Riders/RiderA"]
+collision_layer = 0
+collision_mask = 2
+
+[node name="Collision" type="CollisionShape2D" parent="Riders/RiderA/SealArea"]
+shape = SubResource("rect_seal")
+
+[node name="RiderB" type="StaticBody2D" parent="Riders"]
+top_level = true
+position = Vector2(-400, -400)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_rider")
+
+[node name="Visual" type="Node2D" parent="Riders/RiderB"]
+
+[node name="Plate" type="Polygon2D" parent="Riders/RiderB/Visual"]
+polygon = PackedVector2Array(-38, -26, 38, -26, 38, 20, 30, 28, -30, 28, -38, 20)
+color = Color(0.86, 0.8, 0.62, 1)
+
+[node name="Rivets" type="Polygon2D" parent="Riders/RiderB/Visual"]
+polygon = PackedVector2Array(-30, 8, 30, 8, 30, 13, -30, 13)
+color = Color(0.4, 0.36, 0.28, 1)
+
+[node name="Wax" type="Polygon2D" parent="Riders/RiderB/Visual"]
+position = Vector2(0, -22)
+polygon = PackedVector2Array(0, -18, 16, 0, 0, 18, -16, 0)
+color = Color(0.95, 0.78, 0.3, 1)
+
+[node name="Collision" type="CollisionShape2D" parent="Riders/RiderB"]
+shape = SubResource("rect_rider")
+
+[node name="SealArea" type="Area2D" parent="Riders/RiderB"]
+collision_layer = 0
+collision_mask = 2
+
+[node name="Collision" type="CollisionShape2D" parent="Riders/RiderB/SealArea"]
+shape = SubResource("rect_seal")
+
+[node name="RiderC" type="StaticBody2D" parent="Riders"]
+top_level = true
+position = Vector2(-400, -400)
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("2_rider")
+
+[node name="Visual" type="Node2D" parent="Riders/RiderC"]
+
+[node name="Plate" type="Polygon2D" parent="Riders/RiderC/Visual"]
+polygon = PackedVector2Array(-38, -26, 38, -26, 38, 20, 30, 28, -30, 28, -38, 20)
+color = Color(0.86, 0.8, 0.62, 1)
+
+[node name="Rivets" type="Polygon2D" parent="Riders/RiderC/Visual"]
+polygon = PackedVector2Array(-30, 8, 30, 8, 30, 13, -30, 13)
+color = Color(0.4, 0.36, 0.28, 1)
+
+[node name="Wax" type="Polygon2D" parent="Riders/RiderC/Visual"]
+position = Vector2(0, -22)
+polygon = PackedVector2Array(0, -18, 16, 0, 0, 18, -16, 0)
+color = Color(0.95, 0.78, 0.3, 1)
+
+[node name="Collision" type="CollisionShape2D" parent="Riders/RiderC"]
+shape = SubResource("rect_rider")
+
+[node name="SealArea" type="Area2D" parent="Riders/RiderC"]
+collision_layer = 0
+collision_mask = 2
+
+[node name="Collision" type="CollisionShape2D" parent="Riders/RiderC/SealArea"]
+shape = SubResource("rect_seal")
+
+[node name="Exclusion" type="Node2D" parent="."]
+top_level = true
+position = Vector2(800, 574)
+
+[node name="Band" type="Polygon2D" parent="Exclusion"]
+polygon = PackedVector2Array(-50, -48, 50, -48, 50, 48, -50, 48)
+color = Color(0.06, 0.05, 0.08, 0.92)
+
+[node name="BandArea" type="Area2D" parent="Exclusion"]
+collision_layer = 0
+collision_mask = 2
+
+[node name="Collision" type="CollisionShape2D" parent="Exclusion/BandArea"]
+shape = SubResource("rect_band")
+
+[node name="Sweep" type="Node2D" parent="."]
+top_level = true
+position = Vector2(800, 440)
+
+[node name="Flail" type="Polygon2D" parent="Sweep"]
+polygon = PackedVector2Array(-14, -60, 14, -60, 30, 0, 14, 60, -14, 60, -30, 0)
+color = Color(0.86, 0.8, 0.62, 1)
+
+[node name="FlailArea" type="Area2D" parent="Sweep"]
+collision_layer = 0
+collision_mask = 2
+
+[node name="Collision" type="CollisionShape2D" parent="Sweep/FlailArea"]
+shape = SubResource("rect_sweep")
+
+[node name="OnScreen" type="VisibleOnScreenNotifier2D" parent="."]
+rect = Rect2(-80, -60, 160, 120)

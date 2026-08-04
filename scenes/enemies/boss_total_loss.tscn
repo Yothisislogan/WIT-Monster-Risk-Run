@@ -1,0 +1,87 @@
+[gd_scene load_steps=5 format=3 uid="uid://witbosstl00001"]
+
+[ext_resource type="Script" path="res://scripts/enemies/boss_total_loss.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/fireball.tscn" id="2_scrap"]
+[ext_resource type="PackedScene" path="res://scenes/rooms/premium.tscn" id="3_premium"]
+
+[sub_resource type="RectangleShape2D" id="rect_body"]
+size = Vector2(96, 104)
+
+[node name="BossTotalLoss" type="CharacterBody2D" groups=["boss"]]
+collision_layer = 4
+collision_mask = 1
+script = ExtResource("1_script")
+max_health = 460
+contact_damage = 15
+currency_reward = 60
+defeat_source = "written off by the Total Loss"
+weaken_ratio = 0.0
+premium_scene = ExtResource("3_premium")
+premium_drops = 8
+death_color = Color(0.95, 0.7, 0.3, 1)
+always_active = true
+scrap_scene = ExtResource("2_scrap")
+
+[node name="Visual" type="Node2D" parent="."]
+
+[node name="WheelFront" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(-42, 28, -14, 28, -14, 50, -42, 50)
+color = Color(0.09, 0.1, 0.12, 1)
+
+[node name="WheelRear" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(14, 28, 42, 28, 42, 50, 14, 50)
+color = Color(0.09, 0.1, 0.12, 1)
+
+[node name="Chassis" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(-48, 4, 48, 4, 48, 32, -48, 32)
+color = Color(0.36, 0.38, 0.4, 1)
+
+[node name="Cab" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(14, -36, 48, -36, 48, 4, 6, 4)
+color = Color(0.52, 0.5, 0.44, 1)
+
+[node name="Windscreen" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(20, -30, 42, -30, 42, -6, 14, -6)
+color = Color(0.16, 0.24, 0.3, 1)
+
+[node name="Chevron" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(-48, 10, 48, 10, 48, 20, -48, 20)
+color = Color(0.86, 0.6, 0.14, 1)
+
+[node name="Winch" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(-36, -18, -8, -18, -8, 4, -36, 4)
+color = Color(0.3, 0.32, 0.34, 1)
+
+[node name="Beacon" type="Polygon2D" parent="Visual"]
+polygon = PackedVector2Array(22, -48, 38, -48, 38, -36, 22, -36)
+color = Color(1, 0.72, 0.2, 1)
+
+[node name="Boom" type="Node2D" parent="."]
+position = Vector2(-22, -14)
+rotation = -1.5708
+
+[node name="Arm" type="Polygon2D" parent="Boom"]
+polygon = PackedVector2Array(0, -7, 118, -4, 118, 4, 0, 7)
+color = Color(0.62, 0.58, 0.3, 1)
+
+[node name="Cable" type="Polygon2D" parent="Boom"]
+polygon = PackedVector2Array(116, -2, 150, -2, 150, 2, 116, 2)
+color = Color(0.2, 0.21, 0.23, 1)
+
+[node name="Hook" type="Polygon2D" parent="Boom"]
+position = Vector2(156, 4)
+polygon = PackedVector2Array(-10, -10, 10, -10, 10, 6, 0, 14, -10, 6)
+color = Color(0.78, 0.72, 0.58, 1)
+
+[node name="Collision" type="CollisionShape2D" parent="."]
+shape = SubResource("rect_body")
+
+[node name="Hitbox" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="Collision" type="CollisionShape2D" parent="Hitbox"]
+shape = SubResource("rect_body")
+
+[node name="OnScreen" type="VisibleOnScreenNotifier2D" parent="."]
+rect = Rect2(-60, -60, 120, 120)

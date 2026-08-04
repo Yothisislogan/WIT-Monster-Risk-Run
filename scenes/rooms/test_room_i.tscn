@@ -1,0 +1,282 @@
+[gd_scene load_steps=19 format=3 uid="uid://witroomi00001"]
+
+[ext_resource type="Script" path="res://scripts/rooms/room.gd" id="1_room"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/slip_slime.tscn" id="2_slime"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/toaster_trooper.tscn" id="3_trooper"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/lawsuit_launcher.tscn" id="4_launcher"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/ember_imp.tscn" id="5_imp"]
+[ext_resource type="PackedScene" path="res://scenes/hazards/oil_slick.tscn" id="6_oil"]
+[ext_resource type="PackedScene" path="res://scenes/rooms/bounce_pad.tscn" id="7_pad"]
+[ext_resource type="PackedScene" path="res://scenes/rooms/crate.tscn" id="8_crate"]
+[ext_resource type="PackedScene" path="res://scenes/rooms/premium.tscn" id="9_premium"]
+[ext_resource type="PackedScene" path="res://scenes/rooms/coverage_pickup.tscn" id="10_medkit"]
+
+[sub_resource type="RectangleShape2D" id="rect_1600x60"]
+size = Vector2(1600, 60)
+
+[sub_resource type="RectangleShape2D" id="rect_40x900"]
+size = Vector2(40, 900)
+
+[sub_resource type="RectangleShape2D" id="rect_420x32"]
+size = Vector2(420, 32)
+
+[sub_resource type="RectangleShape2D" id="rect_400x32"]
+size = Vector2(400, 32)
+
+[sub_resource type="RectangleShape2D" id="rect_130x32"]
+size = Vector2(130, 32)
+
+[sub_resource type="RectangleShape2D" id="rect_240x32"]
+size = Vector2(240, 32)
+
+[sub_resource type="RectangleShape2D" id="rect_24x96"]
+size = Vector2(24, 96)
+
+[sub_resource type="RectangleShape2D" id="rect_48x96"]
+size = Vector2(48, 96)
+
+[node name="TestRoomI" type="Node2D"]
+script = ExtResource("1_room")
+
+[node name="SpawnPoint" type="Marker2D" parent="."]
+position = Vector2(150, 540)
+
+[node name="Platforms" type="Node2D" parent="."]
+
+[node name="Ground" type="StaticBody2D" parent="Platforms"]
+position = Vector2(800, 630)
+
+[node name="Shape" type="CollisionShape2D" parent="Platforms/Ground"]
+shape = SubResource("rect_1600x60")
+
+[node name="Visual" type="Polygon2D" parent="Platforms/Ground"]
+polygon = PackedVector2Array(-800, -30, 800, -30, 800, 30, -800, 30)
+color = Color(0.14, 0.14, 0.16, 1)
+
+[node name="Trim" type="Polygon2D" parent="Platforms/Ground"]
+polygon = PackedVector2Array(-800, -30, 800, -30, 800, -25, -800, -25)
+color = Color(0.85, 0.65, 0.2, 1)
+
+[node name="WallLeft" type="StaticBody2D" parent="Platforms"]
+position = Vector2(-20, 250)
+
+[node name="Shape" type="CollisionShape2D" parent="Platforms/WallLeft"]
+shape = SubResource("rect_40x900")
+
+[node name="Visual" type="Polygon2D" parent="Platforms/WallLeft"]
+polygon = PackedVector2Array(-20, -450, 20, -450, 20, 450, -20, 450)
+color = Color(0.1, 0.1, 0.12, 1)
+
+[node name="WallRight" type="StaticBody2D" parent="Platforms"]
+position = Vector2(1620, 250)
+
+[node name="Shape" type="CollisionShape2D" parent="Platforms/WallRight"]
+shape = SubResource("rect_40x900")
+
+[node name="Visual" type="Polygon2D" parent="Platforms/WallRight"]
+polygon = PackedVector2Array(-20, -450, 20, -450, 20, 450, -20, 450)
+color = Color(0.1, 0.1, 0.12, 1)
+
+[node name="Guardrail" type="StaticBody2D" parent="Platforms"]
+position = Vector2(64, 552)
+
+[node name="Shape" type="CollisionShape2D" parent="Platforms/Guardrail"]
+shape = SubResource("rect_24x96")
+
+[node name="Visual" type="Polygon2D" parent="Platforms/Guardrail"]
+polygon = PackedVector2Array(-12, -48, 12, -48, 12, 48, -12, 48)
+color = Color(0.68, 0.68, 0.72, 1)
+
+[node name="Stripe" type="Polygon2D" parent="Platforms/Guardrail"]
+polygon = PackedVector2Array(-12, -40, 12, -40, 12, -26, -12, -26)
+color = Color(0.95, 0.72, 0.18, 1)
+
+[node name="SpillLedgeA" type="StaticBody2D" parent="Platforms"]
+position = Vector2(400, 484)
+
+[node name="Shape" type="CollisionShape2D" parent="Platforms/SpillLedgeA"]
+shape = SubResource("rect_420x32")
+
+[node name="Visual" type="Polygon2D" parent="Platforms/SpillLedgeA"]
+polygon = PackedVector2Array(-210, -16, 210, -16, 210, 16, -210, 16)
+color = Color(0.18, 0.15, 0.24, 1)
+
+[node name="Trim" type="Polygon2D" parent="Platforms/SpillLedgeA"]
+polygon = PackedVector2Array(-210, -16, 210, -16, 210, -11, -210, -11)
+color = Color(0.5, 0.34, 0.66, 1)
+
+[node name="RailStump" type="Polygon2D" parent="Platforms/SpillLedgeA"]
+polygon = PackedVector2Array(-206, -16, -196, -16, -196, -44, -206, -44)
+color = Color(0.62, 0.6, 0.64, 1)
+
+[node name="RailShear" type="Polygon2D" parent="Platforms/SpillLedgeA"]
+polygon = PackedVector2Array(196, -16, 206, -16, 206, -23, 196, -23)
+color = Color(0.62, 0.6, 0.64, 1)
+
+[node name="SpillLedgeB" type="StaticBody2D" parent="Platforms"]
+position = Vector2(900, 388)
+
+[node name="Shape" type="CollisionShape2D" parent="Platforms/SpillLedgeB"]
+shape = SubResource("rect_400x32")
+
+[node name="Visual" type="Polygon2D" parent="Platforms/SpillLedgeB"]
+polygon = PackedVector2Array(-200, -16, 200, -16, 200, 16, -200, 16)
+color = Color(0.18, 0.15, 0.24, 1)
+
+[node name="Trim" type="Polygon2D" parent="Platforms/SpillLedgeB"]
+polygon = PackedVector2Array(-200, -16, 200, -16, 200, -11, -200, -11)
+color = Color(0.5, 0.34, 0.66, 1)
+
+[node name="RailStump" type="Polygon2D" parent="Platforms/SpillLedgeB"]
+polygon = PackedVector2Array(-196, -16, -186, -16, -186, -40, -196, -40)
+color = Color(0.62, 0.6, 0.64, 1)
+
+[node name="RailShear" type="Polygon2D" parent="Platforms/SpillLedgeB"]
+polygon = PackedVector2Array(186, -16, 196, -16, 196, -21, 186, -21)
+color = Color(0.62, 0.6, 0.64, 1)
+
+[node name="Grip1" type="StaticBody2D" parent="Platforms"]
+position = Vector2(1180, 552)
+
+[node name="Shape" type="CollisionShape2D" parent="Platforms/Grip1"]
+shape = SubResource("rect_130x32")
+
+[node name="Visual" type="Polygon2D" parent="Platforms/Grip1"]
+polygon = PackedVector2Array(-65, -16, 65, -16, 65, 16, -65, 16)
+color = Color(0.22, 0.2, 0.16, 1)
+
+[node name="Trim" type="Polygon2D" parent="Platforms/Grip1"]
+polygon = PackedVector2Array(-65, -16, 65, -16, 65, -11, -65, -11)
+color = Color(0.95, 0.72, 0.18, 1)
+
+[node name="Grip2" type="StaticBody2D" parent="Platforms"]
+position = Vector2(1370, 456)
+
+[node name="Shape" type="CollisionShape2D" parent="Platforms/Grip2"]
+shape = SubResource("rect_130x32")
+
+[node name="Visual" type="Polygon2D" parent="Platforms/Grip2"]
+polygon = PackedVector2Array(-65, -16, 65, -16, 65, 16, -65, 16)
+color = Color(0.22, 0.2, 0.16, 1)
+
+[node name="Trim" type="Polygon2D" parent="Platforms/Grip2"]
+polygon = PackedVector2Array(-65, -16, 65, -16, 65, -11, -65, -11)
+color = Color(0.95, 0.72, 0.18, 1)
+
+[node name="Grip3" type="StaticBody2D" parent="Platforms"]
+position = Vector2(1530, 360)
+
+[node name="Shape" type="CollisionShape2D" parent="Platforms/Grip3"]
+shape = SubResource("rect_130x32")
+
+[node name="Visual" type="Polygon2D" parent="Platforms/Grip3"]
+polygon = PackedVector2Array(-65, -16, 65, -16, 65, 16, -65, 16)
+color = Color(0.22, 0.2, 0.16, 1)
+
+[node name="Trim" type="Polygon2D" parent="Platforms/Grip3"]
+polygon = PackedVector2Array(-65, -16, 65, -16, 65, -11, -65, -11)
+color = Color(0.95, 0.72, 0.18, 1)
+
+[node name="ExitLedge" type="StaticBody2D" parent="Platforms"]
+position = Vector2(1330, 216)
+
+[node name="Shape" type="CollisionShape2D" parent="Platforms/ExitLedge"]
+shape = SubResource("rect_240x32")
+
+[node name="Visual" type="Polygon2D" parent="Platforms/ExitLedge"]
+polygon = PackedVector2Array(-120, -16, 120, -16, 120, 16, -120, 16)
+color = Color(0.2, 0.24, 0.3, 1)
+
+[node name="Trim" type="Polygon2D" parent="Platforms/ExitLedge"]
+polygon = PackedVector2Array(-120, -16, 120, -16, 120, -11, -120, -11)
+color = Color(0.4, 0.7, 1, 1)
+
+[node name="Enemies" type="Node2D" parent="."]
+
+[node name="Slime1" parent="Enemies" instance=ExtResource("2_slime")]
+position = Vector2(350, 428)
+
+[node name="Slime2" parent="Enemies" instance=ExtResource("2_slime")]
+position = Vector2(780, 332)
+
+[node name="Trooper1" parent="Enemies" instance=ExtResource("3_trooper")]
+position = Vector2(900, 560)
+
+[node name="Launcher1" parent="Enemies" instance=ExtResource("4_launcher")]
+position = Vector2(1060, 332)
+
+[node name="Imp1" parent="Enemies" instance=ExtResource("5_imp")]
+position = Vector2(660, 288)
+
+[node name="Hazards" type="Node2D" parent="."]
+
+[node name="OilA1" parent="Hazards" instance=ExtResource("6_oil")]
+position = Vector2(320, 462)
+
+[node name="OilA2" parent="Hazards" instance=ExtResource("6_oil")]
+position = Vector2(500, 462)
+
+[node name="OilB1" parent="Hazards" instance=ExtResource("6_oil")]
+position = Vector2(812, 366)
+
+[node name="OilB2" parent="Hazards" instance=ExtResource("6_oil")]
+position = Vector2(990, 366)
+
+[node name="Props" type="Node2D" parent="."]
+
+[node name="BouncePad" parent="Props" instance=ExtResource("7_pad")]
+position = Vector2(655, 594)
+
+[node name="Crate1" parent="Props" instance=ExtResource("8_crate")]
+position = Vector2(240, 576)
+
+[node name="Crate2" parent="Props" instance=ExtResource("8_crate")]
+position = Vector2(960, 348)
+
+[node name="Crate3" parent="Props" instance=ExtResource("8_crate")]
+position = Vector2(1400, 576)
+
+[node name="Pickups" type="Node2D" parent="."]
+
+[node name="Coin1" parent="Pickups" instance=ExtResource("9_premium")]
+position = Vector2(300, 424)
+
+[node name="Coin2" parent="Pickups" instance=ExtResource("9_premium")]
+position = Vector2(500, 424)
+
+[node name="Coin3" parent="Pickups" instance=ExtResource("9_premium")]
+position = Vector2(655, 380)
+
+[node name="Coin4" parent="Pickups" instance=ExtResource("9_premium")]
+position = Vector2(820, 328)
+
+[node name="Coin5" parent="Pickups" instance=ExtResource("9_premium")]
+position = Vector2(1000, 328)
+
+[node name="Stash1" parent="Pickups" instance=ExtResource("9_premium")]
+position = Vector2(1150, 496)
+
+[node name="Stash2" parent="Pickups" instance=ExtResource("9_premium")]
+position = Vector2(1370, 400)
+
+[node name="Stash3" parent="Pickups" instance=ExtResource("9_premium")]
+position = Vector2(1530, 304)
+
+[node name="Medkit" parent="Pickups" instance=ExtResource("10_medkit")]
+position = Vector2(1210, 496)
+
+[node name="Exit" type="Area2D" parent="."]
+position = Vector2(1330, 152)
+collision_layer = 0
+collision_mask = 2
+
+[node name="Shape" type="CollisionShape2D" parent="Exit"]
+shape = SubResource("rect_48x96")
+
+[node name="Visual" type="Polygon2D" parent="Exit"]
+polygon = PackedVector2Array(-24, -48, 24, -48, 24, 48, -24, 48)
+color = Color(0.12, 0.48, 0.88, 1)
+
+[node name="Glow" type="Polygon2D" parent="Exit"]
+polygon = PackedVector2Array(-14, -36, 14, -36, 14, 36, -14, 36)
+color = Color(0.55, 0.82, 1, 1)

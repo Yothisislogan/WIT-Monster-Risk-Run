@@ -151,21 +151,70 @@ def main() -> int:
         attack_states = [n for n in names
                          if n not in ("INTRO", "IDLE", "HOVER", "DYING", punish)
                          and not n.endswith("_TELL")]
+        # Resolve each attack state's match block, then follow the helpers it
+        # calls. The previous version of this loop could not fail: its fallback
+        # was `all(f"State.{punish}" in code for _ in exits)`, whose condition
+        # does not mention the loop variable, so it only ever asked "does the
+        # punish state appear anywhere in this file" -- true for every boss.
+        # Twelve attack states across four bosses were waved through by it, and
+        # a deliberately chained attack was not caught. CLAUDE.md is explicit
+        # that a checker which has never failed is not known to work.
+        helpers = {name: body for name, body in re.findall(
+            r"^func (_\w+)\(.*?\).*?:\n(.*?)(?=\n\nfunc |\n\n#|\Z)",
+            code, re.MULTILINE | re.DOTALL)}
+
+        match_body = re.search(r"\tmatch _state:\n(.*?)(?=\n\n)", code, re.DOTALL)
+        blocks: dict[str, str] = {}
+        if match_body:
+            parts = re.split(r"\n\t\tState\.(\w+):\n", "\n" + match_body.group(1))
+            for i in range(1, len(parts) - 1, 2):
+                blocks[parts[i]] = parts[i + 1]
+
+        def routes_to_punish(body: str, seen: set[str] | None = None) -> bool:
+            """True if this block reaches the punish state: directly, through a
+            helper it calls, or by handing off to another state that does.
+
+            The hand-off case is why this follows transitions and not just
+            calls. The Inferno Adjuster's SLAM_RISE enters SLAM_DROP, which
+            calls _land_slam(), which enters STUNNED -- a legitimate two-part
+            attack. What the rule is actually against is a CYCLE among attack
+            states with no exit, which is what "chain attacks forever" means;
+            `seen` makes such a cycle terminate as False instead of recursing.
+            """
+            seen = seen if seen is not None else set()
+            if re.search(rf"_enter\(State\.{punish}\b", body):
+                return True
+            for call in re.findall(r"\b(_\w+)\(", body):
+                if call in seen or call not in helpers:
+                    continue
+                seen.add(call)
+                if routes_to_punish(helpers[call], seen):
+                    return True
+            for nxt in re.findall(r"_enter\(State\.(\w+)", body):
+                # A hand-off THROUGH a telegraph is a new attack starting, not
+                # the same one finishing, so it does not count as a route to
+                # the window. That is the whole distinction: SLAM_RISE ->
+                # SLAM_DROP is one attack in two parts and is fine, while
+                # BREAKER -> DELUGE_TELL is two attacks back to back with no
+                # window in between, which is exactly what rule 4 forbids.
+                if nxt.endswith("_TELL"):
+                    continue
+                token = "state:" + nxt
+                if token in seen or nxt not in blocks:
+                    continue
+                seen.add(token)
+                if routes_to_punish(blocks[nxt], seen):
+                    return True
+            return False
+
         for state in attack_states:
-            block = re.search(rf"State\.{state}:\n(.*?)(?=\n\t\tState\.|\n\n)",
-                              code, re.DOTALL)
-            body = block.group(1) if block else ""
-            # Either the state itself falls through to the punish window, or it
-            # is left by a named helper that does.
-            reaches = f"State.{punish}" in body or re.search(
-                r"_(beach|end_charge|land_slam)\(\)", body) is not None
-            if not reaches:
-                # The attack may instead be entered from a helper that ends in
-                # the window; accept that only if every exit does.
-                exits = re.findall(rf"_enter\(State\.{state}, ", code)
-                helper = all(f"State.{punish}" in code for _ in exits) and bool(exits)
-                reaches = helper
-            if not reaches:
+            body = blocks.get(state)
+            if body is None:
+                problems.append(
+                    f"{key}: State.{state} has no arm in the _physics_process "
+                    f"match, so nothing drives it and it can never end")
+                continue
+            if not routes_to_punish(body):
                 problems.append(
                     f"{key}: State.{state} has no route into State.{punish}; "
                     f"an attack that does not end in the punish window means "

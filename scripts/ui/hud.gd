@@ -120,6 +120,9 @@ func _process(_delta: float) -> void:
 func _on_quit_pressed() -> void:
 	Sfx.play("ui_confirm")
 	# The run is already checkpointed per room, so quitting is non-destructive.
+	# Clearing run_active is not optional: it is what stops GameManager
+	# auto-pausing the title screen the next time the app loses focus.
+	GameManager.leave_run()
 	get_tree().paused = false
 	get_tree().change_scene_to_file("res://scenes/title.tscn")
 

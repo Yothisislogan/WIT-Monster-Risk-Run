@@ -36,6 +36,15 @@ const MENU_FONT_SIZE := 30
 
 
 func _ready() -> void:
+	# Nothing on the title screen is ever a legitimate thing to pause, and a
+	# paused Control stops taking input entirely — which is how a stale
+	# run_active turned this screen into a still image with dead buttons. Both
+	# halves are deliberate: clear any pause we inherited, and opt the whole
+	# screen out of pausing so no future path can strand it again. Every other
+	# always-live UI in this project does the same (hud.gd, settings_panel.gd,
+	# headquarters_panel.gd, claim_map_screen.gd, site_panel.gd).
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	get_tree().paused = false
 	Settings.apply_all()
 	settings_panel.visible = false
 	deductible_panel.visible = false

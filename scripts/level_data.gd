@@ -47,6 +47,60 @@ const ROOMS := {
 		"music": "boss_theme",
 			"backdrop": Color(0.46, 0.14, 0.12),
 	},
+	"test_room_f": {
+		"name": "SPRINKLER FAILURE",
+		"subtitle": "Suppression system offline",
+		"music": "blaze_borough",
+			"backdrop": Color(0.44, 0.18, 0.14),
+	},
+	"test_room_g": {
+		"name": "ARSON SUSPECTED",
+		"subtitle": "Investigation ongoing",
+		"music": "blaze_borough",
+			"backdrop": Color(0.50, 0.22, 0.15),
+	},
+	"test_room_h": {
+		"name": "MULTI-VEHICLE",
+		"subtitle": "All parties at fault",
+		"music": "crashway_5000",
+			"backdrop": Color(0.18, 0.26, 0.44),
+	},
+	"test_room_i": {
+		"name": "GUARDRAIL DEFICIENCY",
+		"subtitle": "Slippery when litigated",
+		"music": "crashway_5000",
+			"backdrop": Color(0.22, 0.22, 0.38),
+	},
+	"test_room_j": {
+		"name": "SEAWALL BREACH",
+		"subtitle": "Flood exclusion applies",
+		"music": "storm_surge_harbor",
+			"backdrop": Color(0.12, 0.34, 0.38),
+	},
+	"test_room_k": {
+		"name": "CARGO SHIFT",
+		"subtitle": "Contents not itemised",
+		"music": "storm_surge_harbor",
+			"backdrop": Color(0.10, 0.30, 0.42),
+	},
+	"test_room_l": {
+		"name": "SERVER FARM",
+		"subtitle": "Data loss is not property",
+		"music": "cyber_city",
+			"backdrop": Color(0.14, 0.20, 0.48),
+	},
+	"boss_fine_print": {
+		"name": "THE FINE PRINT",
+		"subtitle": "Terms and conditions apply",
+		"music": "boss_theme",
+			"backdrop": Color(0.20, 0.18, 0.30),
+	},
+	"boss_total_loss": {
+		"name": "THE TOTAL LOSS",
+		"subtitle": "Not economical to repair",
+		"music": "boss_theme",
+			"backdrop": Color(0.24, 0.20, 0.34),
+	},
 	"boss_high_water_mark": {
 		"name": "THE HIGH-WATER MARK",
 		"subtitle": "The flood exclusion applies",
@@ -64,6 +118,13 @@ const COMBAT_ROOMS: Array[String] = [
 	"res://scenes/rooms/test_room_c.tscn",
 	"res://scenes/rooms/test_room_d.tscn",
 	"res://scenes/rooms/test_room_e.tscn",
+	"res://scenes/rooms/test_room_f.tscn",
+	"res://scenes/rooms/test_room_g.tscn",
+	"res://scenes/rooms/test_room_h.tscn",
+	"res://scenes/rooms/test_room_i.tscn",
+	"res://scenes/rooms/test_room_j.tscn",
+	"res://scenes/rooms/test_room_k.tscn",
+	"res://scenes/rooms/test_room_l.tscn",
 ]
 
 ## Bosses in act order, cycled. Three acts and three bosses, so a run now sees
@@ -74,6 +135,8 @@ const BOSS_ROOMS: Array[String] = [
 	"res://scenes/rooms/boss_inferno_adjuster.tscn",
 	"res://scenes/rooms/boss_high_water_mark.tscn",
 	"res://scenes/rooms/boss_actuary.tscn",
+	"res://scenes/rooms/boss_fine_print.tscn",
+	"res://scenes/rooms/boss_total_loss.tscn",
 ]
 
 const FALLBACK := {

@@ -483,6 +483,17 @@ func save_checkpoint() -> void:
 	})
 
 
+## Step away from a run without ending it. Quitting to the title is not the
+## same event as dying or winning: the checkpoint stays, the lifetime stats are
+## not touched, and CONTINUE RUN must still work. What it must NOT leave behind
+## is run_active, because that flag is what _notification() uses to auto-pause
+## on focus loss — and the title screen has nothing that ever unpauses. A run
+## quit mid-way therefore left the title screen one backgrounded app away from
+## freezing solid, buttons and all.
+func leave_run() -> void:
+	run_active = false
+
+
 func end_run(victory: bool) -> void:
 	run_active = false
 	SaveManager.clear_run()
