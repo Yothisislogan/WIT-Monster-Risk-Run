@@ -12,9 +12,22 @@ extends CanvasLayer
 ## on the first frame.
 
 const NODE_SIZE := Vector2(104.0, 104.0)
-const ROW_SPACING := 178.0
-const COL_SPACING := 118.0
-const ORIGIN := Vector2(118.0, 168.0)
+## The graph used to sit in a band across the middle of the frame, leaving a
+## fifth of the screen empty under it and crowding the columns together. These
+## spread it over the space that was already there.
+const ROW_SPACING := 200.0
+const COL_SPACING := 150.0
+const ORIGIN := Vector2(120.0, 150.0)
+
+## How a node reads when it is not the one you can take next. Dimming used to
+## be done with modulate, which multiplies the WHOLE node — including the text
+## and the dark outline the theme puts behind it — so an unreachable node at
+## 30% alpha was a label you genuinely could not read on a dark background.
+## The map is a screen for making a decision on; every option has to be legible
+## whether or not it is currently takeable (§23).
+const SPENT_MIX := 0.5     ## toward SLATE for a site already visited
+const UNTAKEN_MIX := 0.34  ## toward SLATE for a route not currently open
+const SLATE := Color(0.62, 0.67, 0.78, 1.0)
 
 @onready var root: Control = %Root
 @onready var graph: Control = %Graph
@@ -103,14 +116,17 @@ func _build_node_button(node: Dictionary, reachable: bool, visited: bool) -> But
 	button.add_theme_font_size_override("font_size", 22)
 	button.tooltip_text = "%s — %s" % [ClaimMap.kind_name(kind), ClaimMap.kind_blurb(kind)]
 	button.disabled = not reachable
-	# Reachable is bright, visited is spent, the rest is the road not taken.
+	# Reachable is bright, visited is spent, the rest is the road not taken —
+	# but all three are readable. The state is carried by the font colour, not
+	# by modulate, and every variant stays fully opaque.
 	var tint := ClaimMap.kind_color(kind)
-	if reachable:
-		button.modulate = tint
-	elif visited:
-		button.modulate = Color(tint.r, tint.g, tint.b, 0.85).darkened(0.45)
-	else:
-		button.modulate = Color(tint.r, tint.g, tint.b, 0.3)
+	var shade := tint
+	if visited and not reachable:
+		shade = tint.lerp(SLATE, SPENT_MIX)
+	elif not reachable:
+		shade = tint.lerp(SLATE, UNTAKEN_MIX)
+	button.add_theme_color_override("font_color", shade)
+	button.add_theme_color_override("font_disabled_color", shade)
 	button.focus_mode = Control.FOCUS_ALL if reachable else Control.FOCUS_NONE
 	button.pressed.connect(_on_node_pressed.bind(id))
 	_buttons[id] = button
@@ -130,10 +146,12 @@ func _draw_edges() -> void:
 				continue      # an edge into the next act; it has its own screen
 			var reachable: bool = int(next_id) in map.available
 			var walked: bool = id in map.visited and int(next_id) in map.visited
-			var color := Color(1, 1, 1, 0.14)
+			# These were 0.14 / 0.5 / 0.6 and the graph read as a blank screen
+			# with a couple of lit nodes floating in it. The edges ARE the map.
+			var color := Color(0.72, 0.76, 0.86, 0.42)
 			if walked:
-				color = Color(1.0, 0.85, 0.4, 0.5)
+				color = Color(1.0, 0.85, 0.4, 0.75)
 			elif reachable:
-				color = Color(1, 1, 1, 0.6)
+				color = Color(1, 1, 1, 0.9)
 			graph.draw_line(_positions[id], _positions[next_id], color,
 					4.0 if reachable or walked else 2.0, true)

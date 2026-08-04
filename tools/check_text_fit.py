@@ -232,6 +232,54 @@ def main() -> int:
             f"{where} sets {smallest}px. Below 20px on this 1280x720 viewport is "
             f"the size the player already reported as unreadable")
 
+    # --- nothing that carries text may be dimmed out of legibility ----------
+    # The Claim Map shipped with unreachable nodes at
+    #     modulate = Color(tint.r, tint.g, tint.b, 0.3)
+    # modulate multiplies the WHOLE node -- the text and the dark outline the
+    # theme puts behind it, not just the fill -- so on a near-black background
+    # those labels were simply not there, and the player reported the map as an
+    # empty screen. Card buttons, site options, HQ rows and map nodes are all
+    # Buttons built in code and tinted this same way, so this is a class.
+    #
+    # Two things this gets right that the obvious version does not. It measures
+    # the BRIGHTEST channel rather than luma, because on a dark background what
+    # separates text from the background is any one channel being bright -- a
+    # luma test flags the deliberate red damage flash in hud.gd, which is fine.
+    # And it reads a trailing literal alpha even when the colour channels are
+    # expressions, because that is exactly the form the real bug took.
+    ALPHA_FLOOR = 0.6
+    BRIGHTNESS_FLOOR = 0.5
+    NUM = r"[-+]?[\d.]+"
+    for path in sorted((ROOT / "scripts").rglob("*.gd")):
+        text = path.read_text(encoding="utf-8")
+        if ".text = " not in text and "add_theme_color_override" not in text:
+            continue          # nothing in here draws type
+        for found in re.finditer(r"modulate = Color\(([^()]*(?:\([^()]*\)[^()]*)*)\)",
+                                 text):
+            args = [a.strip() for a in found.group(1).split(",")]
+            line = text.count("\n", 0, found.start()) + 1
+            where = f"{path.relative_to(ROOT)}:{line}"
+            if len(args) == 4 and re.fullmatch(NUM, args[3]):
+                alpha = float(args[3])
+                if alpha < ALPHA_FLOOR:
+                    problems.append(
+                        f"{where}: modulate sets alpha {alpha}, under "
+                        f"{ALPHA_FLOOR}. modulate fades the node's TEXT and its "
+                        f"outline too, so this makes the label itself "
+                        f"unreadable on a dark background -- carry the state "
+                        f"with add_theme_color_override(\"font_color\") and "
+                        f"leave modulate alone")
+                    continue
+            if len(args) >= 3 and all(re.fullmatch(NUM, a) for a in args[:3]):
+                alpha = float(args[3]) if len(args) == 4 and re.fullmatch(
+                    NUM, args[3]) else 1.0
+                brightest = max(float(a) for a in args[:3]) * alpha
+                if brightest < BRIGHTNESS_FLOOR:
+                    problems.append(
+                        f"{where}: modulate leaves the brightest channel at "
+                        f"{brightest:.2f}, under {BRIGHTNESS_FLOOR}. That dims "
+                        f"the node's text as well as its fill")
+
     for row in rows:
         print(row)
 

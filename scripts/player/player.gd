@@ -217,7 +217,15 @@ func apply_camera_bounds(bounds: Rect2) -> void:
 	camera.limit_top = int(bounds.position.y)
 	camera.limit_right = int(bounds.position.x + bounds.size.x)
 	camera.limit_bottom = int(bounds.position.y + bounds.size.y)
+	# Twice, on purpose. main.gd teleports the player and calls this in the same
+	# frame, and the camera is a CHILD of the player — so at this moment its own
+	# global transform has not necessarily caught up with the parent it was just
+	# dragged across the room by, and snapping to a stale transform leaves the
+	# view sitting where the last room was while the Monster stands off-screen.
+	# The deferred call runs once transforms have settled and snaps to the
+	# position that is actually correct.
 	camera.reset_smoothing()
+	camera.call_deferred("reset_smoothing")
 
 
 func _physics_process(delta: float) -> void:
