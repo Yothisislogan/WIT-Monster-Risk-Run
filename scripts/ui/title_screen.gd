@@ -137,7 +137,7 @@ func _build_deductibles() -> void:
 	for key in ["low", "standard", "high"]:
 		var preset: Dictionary = GameManager.DEDUCTIBLES[key]
 		var button := Button.new()
-		button.custom_minimum_size = Vector2(0, 146)
+		button.custom_minimum_size = Vector2(0, 156)
 		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		button.add_theme_font_size_override("font_size", 26)
 		button.text = "%s\n%s\nStarting Coverage %d" % [

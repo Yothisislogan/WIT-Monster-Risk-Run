@@ -363,7 +363,13 @@ func _on_risk_changed(value: float) -> void:
 ## Card offer between rooms (§9). Pauses so the choice is unhurried, and the
 ## three options are big touch targets rather than a scrolling list (§9, §23).
 func _on_cards_offered(cards: Array) -> void:
+	# remove_child before queue_free: queue_free defers to the end of the
+	# frame, so without this the previous draft's buttons are still in the row
+	# while the new ones are added — and _focus_first(card_row) then grabs a
+	# button that is about to be deleted. Same fix as _build_menu and
+	# _build_deductibles on the title screen.
 	for child in card_row.get_children():
+		card_row.remove_child(child)
 		child.queue_free()
 	if cards.is_empty():
 		Events.card_chosen.emit("")

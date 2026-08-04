@@ -53,7 +53,7 @@ func _build_upgrade_button(upgrade: Dictionary) -> Button:
 	var maximum := int(upgrade["ranks"])
 	var cost := Headquarters.next_cost(id)
 	var button := Button.new()
-	button.custom_minimum_size = Vector2(0, 130)
+	button.custom_minimum_size = Vector2(0, 156)
 	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	button.add_theme_font_size_override("font_size", 23)
 

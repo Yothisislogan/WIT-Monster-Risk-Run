@@ -69,6 +69,23 @@ def code_size(source: str, anchor: str) -> int:
     return int(found.group(1))
 
 
+def theme_button_margins() -> tuple[float, float]:
+    """(horizontal, vertical) content margin the themed Button box adds. Text
+    fits inside the box MINUS these, so a fit computed without them is wrong by
+    exactly the amount that makes a tight card overflow."""
+    theme = read("assets/ui/theme.tres")
+    block = re.search(r'\[sub_resource type="StyleBoxFlat" id="button_normal"\](.*?)(?=\n\[)',
+                      theme, re.DOTALL)
+    if block is None:
+        return (0.0, 0.0)
+
+    def margin(side: str) -> float:
+        found = re.search(rf"content_margin_{side} = ([\d.]+)", block.group(1))
+        return float(found.group(1)) if found else 0.0
+
+    return (margin("left") + margin("right"), margin("top") + margin("bottom"))
+
+
 def code_min_height(source: str, anchor: str) -> float:
     body = source[source.find(anchor):]
     found = re.search(r"custom_minimum_size = Vector2\(([-\d.]+), ([-\d.]+)\)", body)
@@ -109,11 +126,13 @@ def main() -> int:
 
     # --- Policy Card buttons ------------------------------------------------
     # Up to four buttons share the row: three offers plus PATCH UP.
+    pad_x, pad_y = theme_button_margins()
+    rows.append(f"  themed button padding: {pad_x:.0f}px across, {pad_y:.0f}px down")
     card_panel_w, card_panel_h = panel_box("scenes/ui/hud.tscn", "CardPanel")
     card_row_width = card_panel_w - 40
-    card_width = card_row_width / 4 - 12
+    card_width = card_row_width / 4 - 12 - pad_x
     size = code_size(hud, "func _build_card_button")
-    height = code_min_height(hud, "func _build_card_button")
+    height = code_min_height(hud, "func _build_card_button") - pad_y
     worst, worst_id = 0.0, ""
     for card_id, text in zip(strings(card_db, "id"), strings(card_db, "text")):
         title_line = max(strings(card_db, "title"), key=len)
@@ -150,9 +169,9 @@ def main() -> int:
 
     # --- Site option buttons ------------------------------------------------
     # Panel inset 96px each side of 1280, then 32px margins.
-    site_width = 1280 - 192 - 64
+    site_width = 1280 - 192 - 64 - pad_x
     size = code_size(site_panel, "func _build_option_button")
-    height = code_min_height(site_panel, "func _build_option_button")
+    height = code_min_height(site_panel, "func _build_option_button") - pad_y
     labels, details = strings(site_db, "label"), strings(site_db, "detail")
     block = f"{max(labels, key=len)}        999 PREMIUMS\n{max(details, key=len)}"
     needed = wrapped_height(block, site_width, size)
@@ -164,9 +183,9 @@ def main() -> int:
             f"needs {needed:.0f}px at {size}px")
 
     # --- Headquarters upgrade rows -----------------------------------------
-    hq_width = 1280 - 128 - 56
+    hq_width = 1280 - 128 - 56 - pad_x
     size = code_size(hq_panel, "func _build_upgrade_button")
-    height = code_min_height(hq_panel, "func _build_upgrade_button")
+    height = code_min_height(hq_panel, "func _build_upgrade_button") - pad_y
     block = (f"{max(strings(hq, 'title'), key=len)}   [3/3]        999 FILES\n"
              f"{max(strings(hq, 'effect'), key=len)}\n"
              f"{max(strings(hq, 'blurb'), key=len)}")
@@ -179,9 +198,9 @@ def main() -> int:
             f"needs {needed:.0f}px at {size}px")
 
     # --- Deductible buttons -------------------------------------------------
-    ded_width = 720
+    ded_width = panel_box("scenes/title.tscn", "DeductiblePanel")[0] - 48 - pad_x
     size = code_size(title, "func _build_deductibles")
-    height = code_min_height(title, "func _build_deductibles")
+    height = code_min_height(title, "func _build_deductibles") - pad_y
     block = (f"{max(strings(game_manager, 'label'), key=len)}\n"
              f"{max(strings(game_manager, 'blurb'), key=len)}\nStarting Coverage 130")
     needed = wrapped_height(block, ded_width, size)
@@ -279,6 +298,39 @@ def main() -> int:
                         f"{where}: modulate leaves the brightest channel at "
                         f"{brightest:.2f}, under {BRIGHTNESS_FLOOR}. That dims "
                         f"the node's text as well as its fill")
+
+    # --- the project theme must supply surfaces, not just type --------------
+    # gui/theme/custom REPLACES the styling the engine would otherwise supply.
+    # The first version of assets/ui/theme.tres set colours and font sizes and
+    # nothing else, so PanelContainer had no background and Button had no
+    # normal/hover/pressed box: the Policy Card draft rendered as a title
+    # floating over the playfield with one focus outline where four opaque
+    # cards should have been. Nothing failed; it just was not there.
+    # project.godot writes this as `theme/custom=` under a [gui] section, NOT
+    # as the flat `gui/theme/custom=` the setting is called in the editor. The
+    # first version of this check looked for the flat form, matched nothing,
+    # and silently passed no matter what the theme contained -- a check that
+    # cannot fail, which is the one thing CLAUDE.md says a checker must never
+    # be. Anchor on the section so it is looking at the real file.
+    gui = re.search(r"^\[gui\]\n(.*?)(?=^\[|\Z)", read("project.godot"),
+                    re.MULTILINE | re.DOTALL)
+    theme_path = re.search(r'theme/custom="([^"]+)"', gui.group(1)) if gui else None
+    if theme_path is None:
+        problems.append(
+            "project.godot registers no [gui] theme/custom, so assets/ui/theme.tres "
+            "is not applied to anything")
+    if theme_path:
+        theme = read(theme_path.group(1).removeprefix("res://"))
+        rows.append(f"  project theme: {theme_path.group(1)}")
+        for entry in ("PanelContainer/styles/panel", "Button/styles/normal",
+                      "Button/styles/hover", "Button/styles/pressed",
+                      "Button/styles/focus", "Button/styles/disabled"):
+            if entry not in theme:
+                problems.append(
+                    f"the project theme defines no {entry}. A theme registered "
+                    f"as gui/theme/custom replaces the engine's styling, so a "
+                    f"missing stylebox is not a fallback — it is a control with "
+                    f"no surface at all, drawn as nothing")
 
     for row in rows:
         print(row)

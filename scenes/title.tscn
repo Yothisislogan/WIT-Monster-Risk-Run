@@ -79,10 +79,10 @@ offset_right = 400.0
 offset_bottom = 340.0
 
 [node name="Margin" type="MarginContainer" parent="DeductiblePanel"]
-theme_override_constants/margin_left = 24
-theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 24
-theme_override_constants/margin_bottom = 20
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
 
 [node name="VBox" type="VBoxContainer" parent="DeductiblePanel/Margin"]
 theme_override_constants/separation = 12
