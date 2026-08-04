@@ -47,6 +47,10 @@ PUNISH_STATE = {
     "boss_inferno_adjuster": "STUNNED",
     "boss_actuary": "EXPOSED",
     "boss_high_water_mark": "BEACHED",
+    "boss_fine_print": "SAGGING",
+    "boss_total_loss": "WRECKED",
+    "boss_claims_swarm": "SCATTERED",
+    "boss_underwriter": "OVERDRAWN",
 }
 ## The half-second reaction floor from §16, restated once here as the rule the
 ## bosses are held to rather than read from any one of them.
@@ -220,6 +224,34 @@ def main() -> int:
                 problems.append(
                     f"{key}: not in LevelData.BOSS_ROOMS, so no act ever "
                     f"routes to it and the fight is unreachable")
+
+    # --- every boss can actually be drawn -------------------------------------
+    # A run has ClaimMap.ACTS boss slots. If those slots are filled by indexing
+    # BOSS_ROOMS with the act number, only the first ACTS entries are ever
+    # reachable and every boss past that is content nobody can see -- which is
+    # exactly what happened at seven bosses and three acts. The fix is to deal
+    # from a pool shuffled by the map's own seeded generator, so this asserts
+    # the shuffle is still there.
+    # Comments stripped first: the explanatory comment in _assign_rooms names
+    # boss_room_for(act) as the thing it replaced, and a raw search would match
+    # the explanation and report the bug it is explaining.
+    claim_map = strip_comments(read(ROOT / "scripts" / "map" / "claim_map.gd"))
+    acts = int(re.search(r"^const ACTS := (\d+)", claim_map, re.MULTILINE).group(1))
+    rows.append(f"  {acts} boss slots per run, drawn from {len(boss_rooms)} bosses")
+    if len(boss_rooms) < acts:
+        problems.append(
+            f"a run has {acts} boss slots but BOSS_ROOMS lists only "
+            f"{len(boss_rooms)}, so a run must repeat a fight")
+    if "_shuffle(bosses)" not in claim_map:
+        problems.append(
+            "claim_map.gd no longer shuffles the boss pool before dealing. "
+            "Indexing BOSS_ROOMS by act number makes every boss past the first "
+            f"{acts} unreachable in every run -- content nobody will ever see, "
+            "with nothing anywhere reporting an error")
+    if re.search(r"boss_room_for\(", claim_map):
+        problems.append(
+            "claim_map.gd is back to calling boss_room_for(act), which cycles "
+            "the list by act index and hides every boss past the first " + str(acts))
 
     # --- across the set -------------------------------------------------------
     rows.append(f"  {len(scripts)} bosses, {len(ability_ids)} abilities, "

@@ -118,7 +118,12 @@ func _button(text: String, handler: Callable) -> Button:
 
 
 func _build_deductibles() -> void:
+	# remove_child before queue_free, for the same reason _build_menu does it:
+	# queue_free defers to the end of the frame, so a freed child is still in
+	# the tree — and _on_new_policy focuses deductible_rows.get_child(1), which
+	# would pick a stale button that is about to vanish.
 	for child in deductible_rows.get_children():
+		deductible_rows.remove_child(child)
 		child.queue_free()
 	for key in ["low", "standard", "high"]:
 		var preset: Dictionary = GameManager.DEDUCTIBLES[key]

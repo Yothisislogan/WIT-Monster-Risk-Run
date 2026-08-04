@@ -84,12 +84,6 @@ const FALLBACK := {
 }
 
 
-static func boss_room_for(act: int) -> String:
-	if BOSS_ROOMS.is_empty():
-		return ""
-	return BOSS_ROOMS[act % BOSS_ROOMS.size()]
-
-
 static func key_for(scene_path: String) -> String:
 	return scene_path.get_file().get_basename()
 

@@ -122,6 +122,26 @@ extends CharacterBody2D
 ## standing on top of the player, which reads as a bug rather than a vacuum.
 @export var undertow_min_distance: float = 34.0
 
+# --- Clause Breaker (absorbed from the Fine Print, §12) ---
+## The Fine Print's riders only open to a pound, and this is that pound turned
+## around: it starts one from anywhere, including standing on the floor, which
+## the normal pound cannot do.
+@export var clause_breaker_damage: int = 40
+
+# --- Salvage Hook (absorbed from the Total Loss, §12) ---
+## Pure mobility. It throws you toward the wall you are facing and gives your
+## air back, so it is the answer to being over a pit rather than to a peril.
+@export var salvage_hook_speed: float = 900.0
+@export var salvage_hook_lift: float = 260.0
+
+# --- Mass Claim (absorbed from the Claims Swarm, §12) ---
+## Weakens rather than damages, which is the whole idea: a weakened peril can
+## be Munched, and Munching is how the Monster heals (§7).
+@export var mass_claim_bonus_heal: int = 6
+
+# --- Underwrite (absorbed from the Underwriter, §12) ---
+@export var underwrite_damage: int = 58
+
 @onready var sprite: Node2D = $Sprite
 @onready var muzzle: Marker2D = $Muzzle
 @onready var projectile_pool: Node = $ProjectilePool
@@ -151,6 +171,9 @@ var air_dash_available: bool = true
 
 var pounding: bool = false
 var pound_hang_timer: float = 0.0
+## Extra damage for the next pound only, spent on landing. Clause Breaker sets
+## it; the free pound never does.
+var _pound_bonus: int = 0
 
 var impact_dashing: bool = false
 var impact_timer: float = 0.0
@@ -427,9 +450,11 @@ func _land_pound() -> void:
 	# Shockwave damages everything grounded nearby. Crates are StaticBody2D on
 	# the pickup layer, so they come through this loop too — the only Area2Ds
 	# in the mask are Premiums and card pickups, which nothing here can break.
+	var damage := pound_damage + int(GameManager.stat("pound_damage")) + _pound_bonus
+	_pound_bonus = 0
 	for body in pound_area.get_overlapping_bodies():
 		if body.has_method("take_damage"):
-			body.take_damage(pound_damage + int(GameManager.stat("pound_damage")))
+			body.take_damage(damage)
 
 
 ## Landing on an enemy from above stomps it instead of hurting the player.
@@ -559,6 +584,14 @@ func _process_ability() -> void:
 			_fire_risk_pool()
 		Abilities.UNDERTOW:
 			_fire_undertow()
+		Abilities.CLAUSE_BREAKER:
+			_fire_clause_breaker()
+		Abilities.SALVAGE_HOOK:
+			_fire_salvage_hook()
+		Abilities.MASS_CLAIM:
+			_fire_mass_claim()
+		Abilities.UNDERWRITE:
+			_fire_underwrite()
 		_:
 			_fire_flame_draft()
 
@@ -614,6 +647,64 @@ func _fire_undertow() -> void:
 	Juice.shockwave(global_position)
 	Juice.shake(6.0, 0.3)
 	_squash = Vector2(0.72, 1.34)
+
+
+## Clause Breaker: a pound you can start from the ground, hitting far harder
+## than the free one. _try_pound refuses while grounded because a pound that
+## works standing still would replace the whole jump-and-slam rhythm; paying
+## ability energy for it is what makes the exception fair.
+func _fire_clause_breaker() -> void:
+	pounding = true
+	pound_hang_timer = pound_hang_time
+	jump_buffer_timer = 0.0
+	velocity = Vector2.ZERO
+	_pound_bonus = clause_breaker_damage
+	_squash = Vector2(1.35, 0.7)
+	Sfx.play_pitched("pound_impact", -3.0)
+	Juice.shake(5.0, 0.2)
+
+
+## Salvage Hook: a line to the wall you are facing. It is not a weapon — it
+## refills the air jump and the air dash, so its use is getting back to solid
+## ground after a mistake.
+func _fire_salvage_hook() -> void:
+	velocity = Vector2(facing * salvage_hook_speed, -salvage_hook_lift)
+	air_jumps_left = _max_air_jumps()
+	air_dash_available = true
+	pounding = false
+	invulnerability_timer = maxf(invulnerability_timer, 0.2)
+	Sfx.play_pitched("dash", 4.0)
+	Juice.dust(_feet_position(), 8)
+	_squash = Vector2(1.4, 0.7)
+
+
+## Mass Claim: every peril in range drops to the Munch threshold at once. It
+## deals no damage on purpose — a peril killed here is Coverage you did not
+## get, and the heal is the reason to spend the energy.
+func _fire_mass_claim() -> void:
+	var claimed := 0
+	for body in pound_area.get_overlapping_bodies():
+		if body.has_method("weaken_now"):
+			body.weaken_now()
+			claimed += 1
+	if claimed > 0:
+		GameManager.heal(mass_claim_bonus_heal)
+	Sfx.play("charge_ready", 0.05)
+	Juice.shockwave(global_position)
+	Juice.shake(4.0, 0.25)
+	_squash = Vector2(0.8, 1.28)
+
+
+## Underwrite: one charged shot that pierces the whole room. The heaviest
+## single hit the Monster has, and the slowest to pay for.
+func _fire_underwrite() -> void:
+	var beam: Node2D = flame_pool.acquire()
+	beam.launch(muzzle.global_position, aim_direction(),
+			maxi(int(round(float(underwrite_damage)
+				* GameManager.factor("damage_mult"))), 1), true)
+	Sfx.play("charged_shot")
+	Juice.shake(7.0, 0.3)
+	_squash = Vector2(1.3, 0.8)
 
 
 ## Impact Dash: an armoured charge that damages everything it passes through.

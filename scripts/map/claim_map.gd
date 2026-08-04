@@ -262,6 +262,15 @@ func _pick_kind(_act: int, row: int, id: int, used: Dictionary) -> int:
 ## screen can name the zone you are routing toward — the choice is only real
 ## if you can see what you are choosing.
 func _assign_rooms() -> void:
+	# Deal the act bosses from a pool shuffled by THIS map's generator, rather
+	# than indexing the list by act. The old helper returned BOSS_ROOMS[act %
+	# size], which was fine at two bosses and silently hides content at seven:
+	# three acts would always draw the first three entries and the other four
+	# fights would never appear in any run, ever. Dealing without replacement
+	# also guarantees a run never repeats a boss (§12), and because the shuffle
+	# is seeded the same seed still reproduces the same three.
+	var bosses: Array = LevelData.BOSS_ROOMS.duplicate()
+	_shuffle(bosses)
 	for act in ACTS:
 		# Shuffle per act and deal without replacement, so a single act never
 		# repeats a room until the pool is exhausted.
@@ -272,7 +281,8 @@ func _assign_rooms() -> void:
 			for id in _row_ids(act, row):
 				var kind := int(nodes[id]["kind"])
 				if kind == int(Kind.BOSS):
-					nodes[id]["room"] = LevelData.boss_room_for(act)
+					nodes[id]["room"] = String(bosses[act % bosses.size()]) \
+							if not bosses.is_empty() else ""
 				elif is_combat(kind):
 					if next >= bag.size():
 						_shuffle(bag)

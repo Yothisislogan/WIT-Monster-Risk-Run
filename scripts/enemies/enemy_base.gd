@@ -138,6 +138,23 @@ func take_damage(amount: int) -> void:
 		_on_weakened()
 
 
+## MASS CLAIM (§12, §14): bring a peril straight down to the Munch threshold
+## without the damage that would kill it outright. Damaging it there by hand
+## would overshoot on anything already hurt, and a peril that dies is a peril
+## that cannot be eaten — the whole point of the ability is the heal.
+func weaken_now() -> void:
+	if weakened or health <= 0:
+		return
+	var threshold := int(max_health * weaken_ratio)
+	if threshold <= 0:
+		return          # bosses set weaken_ratio 0.0 and are never munchable
+	health = mini(health, maxi(threshold, 1))
+	weakened = true
+	_refresh_health_bar()
+	Events.enemy_weakened.emit()
+	_on_weakened()
+
+
 ## Flame Draft ignites enemies (§12): periodic damage over a few ticks.
 func apply_burn(damage_per_tick: int, ticks: int) -> void:
 	burn_damage = maxi(burn_damage, damage_per_tick)
