@@ -41,6 +41,9 @@ DESIGN = (1280.0, 720.0)
 ## stretch aspect "expand" shows 720 * 20/9 = 1600px of width, i.e. 160px past
 ## each side of the design box.
 WIDEST_ASPECT = 20.0 / 9.0
+## And the tallest. A 3:2 tablet in landscape is the squarest shape this ships
+## on; at 1280 wide that is an 853px viewport against a 720px room shell.
+TALLEST_ASPECT = 3.0 / 2.0
 
 ## Which Monster polygons go where. Each entry is
 ##   (constant, offset constant or None, mirrored, repeat count, spacing const)
@@ -391,6 +394,31 @@ def main() -> int:
         problems.append(
             "the record line can show 3 lines needing %.0fpx at %dpx, in a %.0fpx box"
             % (record_needed, record_size, record[3] - record[1]))
+
+    # --- the gameplay camera can frame any supported aspect -------------------
+    # Rooms are a 1600x720 shell and the project stretches with aspect
+    # "expand", so the viewport is often TALLER than 720: a 16:10 window
+    # resolves to 1280x800 and a 3:2 tablet to 1280x853. Godot cannot honour a
+    # camera limit box smaller than the view — limit_top and limit_bottom
+    # cannot both be satisfied — and the camera settles somewhere neither edge
+    # asked for, which puts the Monster off screen with nothing reporting an
+    # error. player.gd must therefore grow the box to cover the view.
+    player_src = read("scripts/player/player.gd")
+    room_src = read("scripts/rooms/room.gd")
+    shell = re.search(r"camera_bounds: Rect2 = Rect2\((\d+), *(\d+), *(\d+), *(\d+)\)",
+                      room_src)
+    shell_h = float(shell.group(4)) if shell else 720.0
+    tallest = DESIGN[0] / TALLEST_ASPECT
+    rows.append(f"  room shell is {shell_h:.0f}px tall; a {TALLEST_ASPECT:.2f}:1 "
+                f"window resolves to a {tallest:.0f}px viewport")
+    grows = ("get_viewport_rect().size" in player_src
+             and "box.size.y = view.y" in player_src)
+    if tallest > shell_h and not grows:
+        problems.append(
+            f"apply_camera_bounds does not grow the limit box to the viewport, "
+            f"but a {TALLEST_ASPECT:.2f}:1 window gives a {tallest:.0f}px view "
+            f"against a {shell_h:.0f}px box. Godot cannot satisfy both vertical "
+            f"clamps and the camera frames somewhere neither edge asked for")
 
     # --- the backdrop covers the widest phone --------------------------------
     overscan = scalar(splash_src, "OVERSCAN")

@@ -213,10 +213,27 @@ func _ready() -> void:
 ## Rooms clamp the camera so the void outside the level is never on screen.
 func apply_camera_bounds(bounds: Rect2) -> void:
 	var camera: Camera2D = $Camera
-	camera.limit_left = int(bounds.position.x)
-	camera.limit_top = int(bounds.position.y)
-	camera.limit_right = int(bounds.position.x + bounds.size.x)
-	camera.limit_bottom = int(bounds.position.y + bounds.size.y)
+	# Godot cannot honour a limit box smaller than the view. Rooms are a
+	# 1600x720 shell and project.godot stretches with aspect "expand", so the
+	# viewport is routinely TALLER than 720 — a 16:10 window resolves to
+	# 1280x800, 80px more than the box allows. When that happens limit_top and
+	# limit_bottom cannot both be satisfied, the clamps fight, and the camera
+	# settles somewhere neither edge asked for: the Monster ends up off screen
+	# with nothing reporting an error. Growing the box around the room's centre
+	# keeps the clamps satisfiable on any aspect and never moves the framing on
+	# a viewport the room already covers.
+	var view := get_viewport_rect().size
+	var box := bounds
+	if box.size.x < view.x:
+		box.position.x -= (view.x - box.size.x) * 0.5
+		box.size.x = view.x
+	if box.size.y < view.y:
+		box.position.y -= (view.y - box.size.y) * 0.5
+		box.size.y = view.y
+	camera.limit_left = int(box.position.x)
+	camera.limit_top = int(box.position.y)
+	camera.limit_right = int(box.position.x + box.size.x)
+	camera.limit_bottom = int(box.position.y + box.size.y)
 	# Twice, on purpose. main.gd teleports the player and calls this in the same
 	# frame, and the camera is a CHILD of the player — so at this moment its own
 	# global transform has not necessarily caught up with the parent it was just
