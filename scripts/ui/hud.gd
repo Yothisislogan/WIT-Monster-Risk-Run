@@ -393,18 +393,17 @@ func _build_patch_button() -> Button:
 	if GameManager.coverage >= GameManager.max_coverage:
 		return null
 	var cost := PATCH_COST
-	var button := Button.new()
+	var button := WrappedButton.make(22)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.custom_minimum_size = Vector2(0, 480)
-	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	button.add_theme_font_size_override("font_size", 22)
 	var affordable := GameManager.currency >= cost
-	button.text = "\n".join([
+	WrappedButton.caption(button, "\n".join([
 		"PATCH UP", "",
 		"Restore %d Coverage instead of taking an endorsement." % PATCH_HEAL,
-		"", "COST: %d PREMIUMS" % cost])
+		"", "COST: %d PREMIUMS" % cost]))
 	button.disabled = not affordable
-	button.modulate = Color(0.6, 1.0, 0.7) if affordable else Color(0.5, 0.5, 0.5)
+	WrappedButton.tint(button,
+		Color(0.6, 1.0, 0.7) if affordable else Color(0.62, 0.65, 0.72))
 	button.pressed.connect(_on_patch_picked)
 	return button
 
@@ -420,19 +419,18 @@ func _on_patch_picked() -> void:
 
 
 func _build_card_button(card: PolicyCard) -> Button:
-	var button := Button.new()
+	var button := WrappedButton.make(22)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.custom_minimum_size = Vector2(0, 480)
-	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	button.add_theme_font_size_override("font_size", 22)
 	var lines := [card.title.to_upper(), "", card.text]
 	if card.is_exclusion:
 		lines.append("")
 		lines.append("EXCLUSION — " + card.downside)
 	lines.append("")
 	lines.append("%s · %s" % [card.category.to_upper(), card.rarity_name()])
-	button.text = "\n".join(lines)
-	button.modulate = Color(1.0, 0.72, 0.55) if card.is_exclusion else card.rarity_color()
+	WrappedButton.caption(button, "\n".join(lines))
+	WrappedButton.tint(button,
+		Color(1.0, 0.72, 0.55) if card.is_exclusion else card.rarity_color())
 	button.pressed.connect(_on_card_picked.bind(card.id))
 	return button
 

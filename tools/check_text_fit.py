@@ -63,10 +63,12 @@ def panel_box(scene: str, node: str) -> tuple[float, float]:
 def code_size(source: str, anchor: str) -> int:
     """The font size the builder function applies, read from the code."""
     body = source[source.find(anchor):]
-    found = re.search(r'add_theme_font_size_override\("font_size", (\d+)\)', body)
+    found = re.search(
+        r'add_theme_font_size_override\("font_size", (\d+)\)'
+        r'|WrappedButton\.make\((\d+)', body)
     if found is None:
         raise SystemExit(f"no font size found after {anchor!r}")
-    return int(found.group(1))
+    return int(found.group(1) or found.group(2))
 
 
 def theme_button_margins() -> tuple[float, float]:

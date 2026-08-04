@@ -136,19 +136,17 @@ func _build_deductibles() -> void:
 		child.queue_free()
 	for key in ["low", "standard", "high"]:
 		var preset: Dictionary = GameManager.DEDUCTIBLES[key]
-		var button := Button.new()
+		var button := WrappedButton.make(26)
 		button.custom_minimum_size = Vector2(0, 156)
-		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		button.add_theme_font_size_override("font_size", 26)
-		button.text = "%s\n%s\nStarting Coverage %d" % [
-			preset["label"], preset["blurb"], int(preset["coverage"])]
+		WrappedButton.caption(button, "%s\n%s\nStarting Coverage %d" % [
+			preset["label"], preset["blurb"], int(preset["coverage"])])
 		match key:
 			"low":
-				button.modulate = Color(0.7, 1.0, 0.78)
+				WrappedButton.tint(button, Color(0.7, 1.0, 0.78))
 			"high":
-				button.modulate = Color(1.0, 0.68, 0.6)
+				WrappedButton.tint(button, Color(1.0, 0.68, 0.6))
 			_:
-				button.modulate = Color(0.85, 0.9, 1.0)
+				WrappedButton.tint(button, Color(0.85, 0.9, 1.0))
 		button.pressed.connect(_on_deductible_picked.bind(key))
 		deductible_rows.add_child(button)
 

@@ -59,20 +59,19 @@ func _build_options(options: Array) -> void:
 
 
 func _build_option_button(option: Dictionary) -> Button:
-	var button := Button.new()
+	var button := WrappedButton.make(24)
 	button.custom_minimum_size = Vector2(0, 112)
-	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	button.add_theme_font_size_override("font_size", 24)
 	var cost := int(option.get("cost", 0))
 	var affordable := SiteDb.affordable(option)
 	var head := String(option.get("label", "OPTION"))
 	if cost > 0:
 		head += "        %d PREMIUMS" % cost
-	button.text = "%s\n%s" % [head, String(option.get("detail", ""))]
+	WrappedButton.caption(button, "%s\n%s" % [head, String(option.get("detail", ""))])
 	button.disabled = not affordable
 	# Cost is stated on the button and greying is doubled by the disabled
 	# state, so affordability never depends on reading a colour (§7).
-	button.modulate = Color(1, 1, 1) if affordable else Color(0.55, 0.55, 0.6)
+	WrappedButton.tint(button,
+		Color(1, 1, 1) if affordable else Color(0.62, 0.65, 0.72))
 	button.pressed.connect(_on_option_pressed.bind(option))
 	return button
 

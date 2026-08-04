@@ -52,10 +52,8 @@ func _build_upgrade_button(upgrade: Dictionary) -> Button:
 	var current := Headquarters.rank(id)
 	var maximum := int(upgrade["ranks"])
 	var cost := Headquarters.next_cost(id)
-	var button := Button.new()
+	var button := WrappedButton.make(23)
 	button.custom_minimum_size = Vector2(0, 156)
-	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	button.add_theme_font_size_override("font_size", 23)
 
 	var head := String(upgrade["title"])
 	if maximum > 1:
@@ -64,16 +62,17 @@ func _build_upgrade_button(upgrade: Dictionary) -> Button:
 		head += "   [OWNED]"
 	if cost >= 0:
 		head += "        %d FILES" % cost
-	button.text = "%s\n%s\n%s" % [head, String(upgrade["effect"]), String(upgrade["blurb"])]
+	WrappedButton.caption(button, "%s\n%s\n%s" % [
+		head, String(upgrade["effect"]), String(upgrade["blurb"])])
 
 	var affordable := Headquarters.can_buy(id)
 	button.disabled = not affordable
 	if cost < 0:
-		button.modulate = Color(0.6, 1.0, 0.7)          # maxed out
+		WrappedButton.tint(button, Color(0.6, 1.0, 0.7))          # maxed out
 	elif affordable:
-		button.modulate = Color(1, 1, 1)
+		WrappedButton.tint(button, Color(1, 1, 1))
 	else:
-		button.modulate = Color(0.55, 0.55, 0.62)
+		WrappedButton.tint(button, Color(0.55, 0.55, 0.62))
 	button.pressed.connect(_on_buy.bind(id))
 	return button
 

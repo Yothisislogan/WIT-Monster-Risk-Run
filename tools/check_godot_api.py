@@ -40,6 +40,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
+## The engine this project pins, from .github/workflows/deploy-web.yml. Some of
+## the checks below are version-specific: a property that exists in 4.4 and not
+## in 4.3 is a runtime abort, not a portable convenience.
+GODOT_VERSION = "4.3"
+
 # Godot's inheritance, for the bases used here. Each entry lists ancestors
 # nearest-first; the class itself is implied.
 ANCESTRY = {
@@ -294,6 +299,35 @@ def main() -> int:
     problems: list[str] = []
     resolved = 0
     unknown_bases: set[str] = set()
+
+    # Properties that simply do not exist on the class they are being assigned
+    # to in this engine version. Assigning an unknown property is not a parse
+    # error and not a warning — it raises at RUNTIME and aborts the rest of the
+    # function, so everything after the line silently never happens.
+    #
+    # `Button.autowrap_mode` arrived in Godot 4.4. On the 4.3 this project pins,
+    # five builders read
+    #     button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    #     ...
+    #     button.text = "..."
+    # and the text assignment never ran. Every Policy Card, deductible, site
+    # option and Headquarters row rendered as a styled, focusable, clickable,
+    # completely blank box, and no check in this repository could see it.
+    for path, text in sources.items():
+        rel = path[len("res://"):]
+        for match in re.finditer(
+                r"^\t*(\w+)\.autowrap_mode = ", text, re.MULTILINE):
+            target = match.group(1)
+            if "label" in target.lower():
+                continue          # Label has had autowrap since 3.x
+            line = text.count("\n", 0, match.start()) + 1
+            problems.append(
+                f"{rel}:{line}: `{target}.autowrap_mode` — autowrap_mode does "
+                f"not exist on Button in Godot {GODOT_VERSION}, only on Label. "
+                f"Assigning it raises at runtime and ABORTS the rest of the "
+                f"function, so every line after it silently never runs. Use "
+                f"WrappedButton (scripts/ui/wrapped_button.gd), which puts the "
+                f"caption in a Label child")
 
     # A const must be a compile-time value. The built-in maths types are; the
     # packed arrays and the containers are constructor calls and are not.
